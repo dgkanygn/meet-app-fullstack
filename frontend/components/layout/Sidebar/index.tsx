@@ -10,6 +10,8 @@ import {
   Menu,
   X,
   Zap,
+  CalendarPlus,
+  Settings
 } from "lucide-react";
 import { useState } from "react";
 
@@ -18,6 +20,8 @@ const navItems = [
   { href: "/calendar", label: "Takvim", icon: Calendar },
   { href: "/meeting/start", label: "Toplantı Başlat", icon: Video },
   { href: "/meeting/join", label: "Katıl", icon: LogIn },
+  { href: "/meeting/schedule", label: "Toplantı Planla", icon: CalendarPlus },
+  { href: "/settings", label: "Ayarlar", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -99,9 +103,10 @@ export default function Sidebar() {
 
         {/* Bottom */}
         <div className="px-2 py-3 border-t border-border shrink-0">
-          <div
+          <Link
+            href="/profile"
             className={[
-              "flex items-center gap-3 px-2 py-2 rounded-[6px]",
+              "flex items-center gap-3 px-2 py-2 rounded-[6px] hover:bg-border/50 transition-colors cursor-pointer",
               collapsed ? "justify-center" : "",
             ].join(" ")}
           >
@@ -116,7 +121,7 @@ export default function Sidebar() {
                 <p className="text-xs text-muted truncate">dogukan@meet.app</p>
               </div>
             )}
-          </div>
+          </Link>
         </div>
       </aside>
     </>

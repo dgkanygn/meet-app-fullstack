@@ -1,5 +1,6 @@
 import MeetingCard from "@/components/dashboard/MeetingCard";
 import QuickActions from "@/components/dashboard/QuickActions";
+import UserInvite from "@/components/ui/UserInvite";
 
 const mockMeetings = [
   {
@@ -31,16 +32,22 @@ export default function DashboardPage() {
       {/* Karşılama */}
       <div>
         <h1 className="text-3xl font-semibold text-foreground">
-          Merhaba, Dogukan 👋
+          Merhaba, Dogukan
         </h1>
         <p className="text-sm text-muted mt-1">
-          Yaklaşan toplantılarına göz at veya hemen bir tane başlat.
+          İşlerini hızlıca yönet.
         </p>
       </div>
 
       <div className="grid lg:grid-cols-[1fr_280px] gap-6 items-start">
         {/* Toplantı listesi */}
         <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">
+            Kişi Ekleyin
+          </h2>
+          <UserInvite />
+          <br />
+
           <h2 className="text-sm font-semibold text-foreground">
             Yaklaşan Toplantılar
           </h2>
@@ -49,8 +56,10 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <QuickActions />
+        {/* Sağ Kolon */}
+        <div className="space-y-6">
+          <QuickActions />
+        </div>
       </div>
     </div>
   );

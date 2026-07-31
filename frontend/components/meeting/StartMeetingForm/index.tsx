@@ -7,10 +7,15 @@ import { z } from "zod";
 import { Mic, MicOff, Video, VideoOff } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import TextArea from "@/components/ui/TextArea";
+import PasswordInput from "@/components/ui/PasswordInput";
 
 const schema = z.object({
   title: z.string().min(2, "Toplantı adı en az 2 karakter olmalı"),
+  description: z.string().optional(),
+  password: z.string().optional(),
 });
+
 type FormData = z.infer<typeof schema>;
 
 export default function StartMeetingForm() {
@@ -31,11 +36,25 @@ export default function StartMeetingForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
       <Input
-        label="Toplantı Adı"
+        label="Toplantı Adı*"
         type="text"
         placeholder="Örn. Haftalık Ekip Toplantısı"
         error={errors.title?.message}
         {...register("title")}
+      />
+
+      <TextArea
+        label="Açıklama"
+        placeholder="Toplantı detayları..."
+        error={errors.description?.message}
+        {...register("description")}
+      />
+
+      <PasswordInput
+        label="Şifre"
+        placeholder="Toplantı şifresi"
+        error={errors.password?.message}
+        {...register("password")}
       />
 
       {/* Önizleme alanı */}
