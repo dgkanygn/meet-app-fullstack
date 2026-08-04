@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MeetApp.Api/MeetApp.Api.csproj" />
+    <Project Path="src/MeetApp.Application/MeetApp.Application.csproj" />
+    <Project Path="src/MeetApp.Domain/MeetApp.Domain.csproj" />
+    <Project Path="src/MeetApp.Infrastructure/MeetApp.Infrastructure.csproj" />
+  </Folder>
+</Solution>

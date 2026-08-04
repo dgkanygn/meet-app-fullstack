@@ -1,0 +1,78 @@
+# ==========================================
+# 1. NET / C# / EF Core
+# ==========================================
+# Build / Output outputs
+[Bb]in/
+[Oo]bj/
+out/
+[Ll]og/
+[Ll]ogs/
+
+# User-specific files & IDE Settings
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.vscode/
+.idea/
+*.suo
+
+# EF Core Tools & Local DBs
+*.user
+*.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Entity Framework Core Bundle outputs
+efbundle
+efbundle.exe
+
+# ==========================================
+# 2. Next.js / Node.js
+# ==========================================
+# Dependencies
+/node_modules
+/.pnpm
+/.yarn
+
+# Next.js Build Output
+/.next/
+/out/
+/build
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# TypeScript / Cache
+*.tsbuildinfo
+.eslintcache
+
+# ==========================================
+# 3. Environment & Local Configs (ÖNEMLİ!)
+# ==========================================
+# PostgreSQL şifreleri, API key'leri barındıran hassas dosyalar
+.env
+.env*.local
+.env.development.local
+.env.test.local
+.env.production.local
+appsettings.Development.json
+appsettings.Local.json
+
+# ==========================================
+# 4. OS / System Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
