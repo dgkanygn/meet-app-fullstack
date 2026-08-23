@@ -44,7 +44,12 @@ public class ConnectionService(
         await connectionRepository.SaveChangesAsync(ct);
 
         // Notify addressee
-        var requester = await profileRepository.GetByIdAsync(requesterId, ct);
+        var requester = await profileRepository.GetByIdAsync(requesterId, ct)
+            ?? throw new NotFoundException("Profile", requesterId);
+
+        // Yanitta isim/kullanici adi dolu donsun diye navigation'lari elle bagliyoruz.
+        connection.Requester = requester;
+        connection.Addressee = addressee;
         var notification = new Notification
         {
             Id = Guid.NewGuid(),
@@ -69,11 +74,11 @@ public class ConnectionService(
 
     public async Task<ConnectionResponse> UpdateConnectionAsync(Guid id, Guid requesterId, UpdateConnectionRequest request, CancellationToken ct = default)
     {
-        var connection = await connectionRepository.GetByIdAsync(id, ct)
+        var connection = await connectionRepository.GetByIdWithProfilesAsync(id, ct)
             ?? throw new NotFoundException("Connection", id);
 
         if (connection.AddresseeId != requesterId && connection.RequesterId != requesterId)
-            throw new UnauthorizedException("Cannot update this connection.");
+            throw new ForbiddenException("Cannot update this connection.");
 
         connection.Status = request.Status;
         connectionRepository.Update(connection);
@@ -112,7 +117,7 @@ public class ConnectionService(
             ?? throw new NotFoundException("Connection", id);
 
         if (connection.RequesterId != profileId && connection.AddresseeId != profileId)
-            throw new UnauthorizedException("Cannot delete this connection.");
+            throw new ForbiddenException("Cannot delete this connection.");
 
         connectionRepository.Remove(connection);
         await connectionRepository.SaveChangesAsync(ct);
