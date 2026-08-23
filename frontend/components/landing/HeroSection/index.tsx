@@ -56,8 +56,8 @@ function MockMeetingUI() {
 
 export default function HeroSection() {
   return (
-    <section className="w-full max-w-6xl mx-auto px-6 py-20 lg:py-32">
-      <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+    <section className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20 lg:py-32">
+      <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         {/* Left: Copy */}
         <div className="space-y-6">
           <h1

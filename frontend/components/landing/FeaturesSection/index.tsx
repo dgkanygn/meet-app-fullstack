@@ -24,8 +24,8 @@ const features = [
 export default function FeaturesSection() {
   return (
     <section className="w-full border-t border-border">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div className="grid gap-8 sm:grid-cols-2 md:grid-cols-3">
           {features.map(({ icon: Icon, title, description }) => (
             <div key={title} className="space-y-3">
               <div className="w-9 h-9 rounded-[6px] border border-border flex items-center justify-center">
