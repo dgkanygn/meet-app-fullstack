@@ -1,23 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Settings, LogOut, User } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
+import { useSession } from "@/lib/context/SessionContext";
 
 export default function UserDropdown() {
   const [open, setOpen] = useState(false);
+  const { profile, logout } = useSession();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
-        id="topbar-user-menu"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 cursor-pointer text-sm text-foreground hover:text-foreground transition-colors"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex cursor-pointer items-center gap-2 text-sm text-foreground transition-colors"
       >
-        <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center">
-          <span className="text-xs font-semibold text-accent">D</span>
-        </div>
-        <span className="text-sm font-medium hidden sm:block">Dogukan</span>
+        <Avatar name={profile?.username ?? "?"} size="sm" />
+        <span className="hidden max-w-[140px] truncate text-sm font-medium sm:block">
+          {profile?.fullName ?? "—"}
+        </span>
         <ChevronDown
           size={14}
           className={`text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
@@ -26,17 +40,14 @@ export default function UserDropdown() {
 
       {open && (
         <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            className="absolute right-0 mt-2 w-48 bg-surface border border-border rounded-[8px] shadow-[var(--shadow-floating)] z-20 py-1"
+            className="absolute right-0 z-20 mt-2 w-48 rounded-[8px] border border-border bg-surface py-1 shadow-[var(--shadow-floating)]"
             role="menu"
           >
             <Link
               href="/profile"
-              className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-border/50 cursor-pointer transition-colors"
+              className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-foreground transition-colors hover:bg-border/50"
               onClick={() => setOpen(false)}
             >
               <User size={14} className="text-muted" />
@@ -44,7 +55,7 @@ export default function UserDropdown() {
             </Link>
             <Link
               href="/settings"
-              className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-border/50 cursor-pointer transition-colors"
+              className="flex cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-foreground transition-colors hover:bg-border/50"
               onClick={() => setOpen(false)}
             >
               <Settings size={14} className="text-muted" />
@@ -52,8 +63,11 @@ export default function UserDropdown() {
             </Link>
             <hr className="my-1 border-border" />
             <button
-              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-error hover:bg-error/5 cursor-pointer transition-colors text-left"
-              onClick={() => setOpen(false)}
+              className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left text-sm text-error transition-colors hover:bg-error/5"
+              onClick={() => {
+                setOpen(false);
+                logout();
+              }}
             >
               <LogOut size={14} />
               Çıkış Yap

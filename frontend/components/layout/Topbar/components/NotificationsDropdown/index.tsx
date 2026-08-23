@@ -1,57 +1,165 @@
 "use client";
 
 import { useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Check } from "lucide-react";
+import Avatar from "@/components/ui/Avatar";
+import { useNotifications } from "@/lib/context/NotificationContext";
+import { connectionService } from "@/lib/services/connectionService";
+import { formatRelativeTime } from "@/lib/utils/date";
+import type { NotificationResponse } from "@/lib/types";
 
 export default function NotificationsDropdown() {
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
+  const {
+    notifications,
+    unreadCount,
+    isLoading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    dismiss,
+  } = useNotifications();
+
+  // Aynı isteğe arka arkaya basılmasını engellemek için işlenmekte olan bildirim.
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  async function respond(
+    notification: NotificationResponse,
+    status: "Accepted" | "Rejected"
+  ) {
+    if (!notification.referenceId) return;
+    setPendingId(notification.id);
+    setActionError(null);
+    try {
+      await connectionService.update(notification.referenceId, status);
+      await markAsRead(notification.id);
+      dismiss(notification.id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "İşlem başarısız.");
+    } finally {
+      setPendingId(null);
+    }
+  }
 
   return (
     <div className="relative">
       <button
-        onClick={() => setNotificationsOpen((o) => !o)}
-        className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-border/50 text-muted hover:text-foreground transition-colors cursor-pointer relative"
-        aria-label="Bildirimler"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={
+          unreadCount > 0
+            ? `Bildirimler (${unreadCount} okunmamış)`
+            : "Bildirimler"
+        }
+        className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted transition-colors hover:bg-border/50 hover:text-foreground"
       >
         <Bell size={18} />
-        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-accent border-2 border-surface"></span>
+        {unreadCount > 0 && (
+          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full border-2 border-surface bg-accent" />
+        )}
       </button>
 
-      {notificationsOpen && (
+      {open && (
         <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div
-            className="fixed inset-0 z-10"
-            onClick={() => setNotificationsOpen(false)}
-          />
-          <div
-            className="absolute right-0 mt-2 w-[320px] bg-surface border border-border rounded-[8px] shadow-[var(--shadow-floating)] z-20"
+            className="absolute right-0 z-20 mt-2 w-[calc(100vw-2rem)] max-w-[320px] rounded-[8px] border border-border bg-surface shadow-[var(--shadow-floating)]"
             role="menu"
           >
-            <div className="px-4 py-3 border-b border-border flex justify-between items-center">
-              <h3 className="text-sm font-semibold text-foreground">Bildirimler</h3>
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <h3 className="text-sm font-semibold text-foreground">
+                Bildirimler
+              </h3>
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="flex shrink-0 cursor-pointer items-center gap-1 text-xs text-muted transition-colors hover:text-foreground"
+                >
+                  <Check size={12} />
+                  Tümünü okundu işaretle
+                </button>
+              )}
             </div>
-            
-            <div className="max-h-[300px] overflow-y-auto py-1">
-              {/* Mock Takip İsteği Bildirimi */}
-              <div className="px-4 py-3 hover:bg-border/30 transition-colors flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-accent/15 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-xs font-semibold text-accent">A</span>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-foreground">
-                    <span className="font-semibold">Ahmet Yılmaz</span> sana bir takip isteği gönderdi.
-                  </p>
-                  <p className="text-xs text-muted mt-0.5 mb-2.5">2 saat önce</p>
-                  <div className="flex items-center gap-2">
-                    <button className="px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-[6px] hover:bg-accent/90 transition-colors cursor-pointer">
-                      Kabul Et
-                    </button>
-                    <button className="px-3 py-1.5 bg-transparent text-foreground border border-border text-xs font-medium rounded-[6px] hover:bg-border/50 transition-colors cursor-pointer">
-                      Reddet
-                    </button>
+
+            <div className="max-h-[320px] overflow-y-auto py-1">
+              {isLoading && (
+                <p className="px-4 py-6 text-center text-sm text-muted">
+                  Yükleniyor...
+                </p>
+              )}
+
+              {!isLoading && error && (
+                <p className="px-4 py-6 text-center text-sm text-error">
+                  {error}
+                </p>
+              )}
+
+              {!isLoading && !error && notifications.length === 0 && (
+                <p className="px-4 py-6 text-center text-sm text-muted">
+                  Yeni bildirimin yok.
+                </p>
+              )}
+
+              {actionError && (
+                <p className="px-4 py-2 text-xs text-error">{actionError}</p>
+              )}
+
+              {notifications.map((notification) => {
+                const isConnectionRequest =
+                  notification.type === "ConnectionRequest" &&
+                  !!notification.referenceId;
+                const isPending = pendingId === notification.id;
+
+                return (
+                  <div
+                    key={notification.id}
+                    onClick={() =>
+                      !notification.isRead && markAsRead(notification.id)
+                    }
+                    className={[
+                      "flex gap-3 px-4 py-3 transition-colors hover:bg-border/30",
+                      notification.isRead ? "" : "bg-accent/5",
+                    ].join(" ")}
+                  >
+                    <Avatar name={notification.message} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm break-words text-foreground">
+                        {notification.message}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        {formatRelativeTime(notification.createdAt)}
+                      </p>
+
+                      {isConnectionRequest && (
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                          <button
+                            disabled={isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              respond(notification, "Accepted");
+                            }}
+                            className="cursor-pointer rounded-[6px] bg-accent px-3 py-1.5 text-xs font-medium text-accent-fg transition-colors hover:bg-accent/90 disabled:opacity-50"
+                          >
+                            Kabul Et
+                          </button>
+                          <button
+                            disabled={isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              respond(notification, "Rejected");
+                            }}
+                            className="cursor-pointer rounded-[6px] border border-border bg-transparent px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-border/50 disabled:opacity-50"
+                          >
+                            Reddet
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
         </>
