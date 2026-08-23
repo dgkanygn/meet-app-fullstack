@@ -27,7 +27,7 @@ public class MeetingParticipantService(
             ?? throw new NotFoundException("Meeting", meetingId);
 
         if (meeting.HostId != hostId)
-            throw new UnauthorizedException("Only the host can invite participants.");
+            throw new ForbiddenException("Only the host can invite participants.");
 
         var invitee = await profileRepository.GetByIdAsync(request.ProfileId, ct)
             ?? throw new NotFoundException("Profile", request.ProfileId);
@@ -81,7 +81,7 @@ public class MeetingParticipantService(
             throw new NotFoundException("Participant", participantId);
 
         if (participant.ProfileId != requesterId)
-            throw new UnauthorizedException("Cannot update another participant's status.");
+            throw new ForbiddenException("Cannot update another participant's status.");
 
         participant.Status = request.Status;
         participant.RespondedAt = DateTime.UtcNow;
@@ -98,7 +98,7 @@ public class MeetingParticipantService(
             ?? throw new NotFoundException("Meeting", meetingId);
 
         if (meeting.HostId != hostId)
-            throw new UnauthorizedException("Only the host can remove participants.");
+            throw new ForbiddenException("Only the host can remove participants.");
 
         var participant = await participantRepository.GetByIdAsync(participantId, ct)
             ?? throw new NotFoundException("Participant", participantId);

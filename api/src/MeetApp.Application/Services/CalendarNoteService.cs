@@ -36,7 +36,7 @@ public class CalendarNoteService(ICalendarNoteRepository calendarNoteRepository)
             ?? throw new NotFoundException("CalendarNote", id);
 
         if (note.ProfileId != profileId)
-            throw new UnauthorizedException("Cannot update another user's note.");
+            throw new ForbiddenException("Cannot update another user's note.");
 
         note.Content = request.Content;
         calendarNoteRepository.Update(note);
@@ -50,7 +50,7 @@ public class CalendarNoteService(ICalendarNoteRepository calendarNoteRepository)
             ?? throw new NotFoundException("CalendarNote", id);
 
         if (note.ProfileId != profileId)
-            throw new UnauthorizedException("Cannot delete another user's note.");
+            throw new ForbiddenException("Cannot delete another user's note.");
 
         calendarNoteRepository.Remove(note);
         await calendarNoteRepository.SaveChangesAsync(ct);

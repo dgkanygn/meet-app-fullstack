@@ -25,6 +25,7 @@ public class GlobalExceptionHandlingMiddleware(RequestDelegate next, ILogger<Glo
         {
             NotFoundException e => (HttpStatusCode.NotFound, e.Message),
             UnauthorizedException e => (HttpStatusCode.Unauthorized, e.Message),
+            ForbiddenException e => (HttpStatusCode.Forbidden, e.Message),
             BusinessException e => (HttpStatusCode.BadRequest, e.Message),
             _ => (HttpStatusCode.InternalServerError, "An unexpected error occurred.")
         };

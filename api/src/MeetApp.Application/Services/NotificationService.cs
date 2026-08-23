@@ -20,7 +20,7 @@ public class NotificationService(INotificationRepository notificationRepository)
             ?? throw new NotFoundException("Notification", id);
 
         if (notification.RecipientId != profileId)
-            throw new UnauthorizedException("Cannot mark another user's notification as read.");
+            throw new ForbiddenException("Cannot mark another user's notification as read.");
 
         notification.IsRead = true;
         notificationRepository.Update(notification);
