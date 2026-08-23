@@ -1,4 +1,6 @@
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using MeetApp.Api.Hubs;
 using MeetApp.Api.Middleware;
 using MeetApp.Api.Realtime;
@@ -16,7 +18,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((ctx, lc) => lc.ReadFrom.Configuration(ctx.Configuration));
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Enum'lar istemciye sayi yerine "Accepted" gibi string olarak gider ve
+        // string olarak da geri okunur.
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // Application & Infrastructure
 builder.Services.AddApplicationServices();
@@ -25,8 +33,13 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 // NotificationPublisher — Api katmanında, IHubContext bağımlılığından dolayı burada kayıtlı
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 
-// SignalR
-builder.Services.AddSignalR();
+// SignalR — hub payload'lari da REST ile ayni JSON sekline sahip olsun
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // JWT Auth
 var jwtSecret = builder.Configuration["Jwt:Secret"]
