@@ -9,6 +9,7 @@ import TextArea from "@/components/ui/TextArea";
 import DatePicker from "@/components/ui/DatePicker";
 import TimePicker from "@/components/ui/TimePicker";
 import PasswordInput from "@/components/ui/PasswordInput";
+import { useCreateMeeting } from "@/lib/hooks/useMeetings";
 
 const schema = z.object({
     title: z.string().min(2, "Toplantı adı en az 2 karakter olmalı"),
@@ -20,15 +21,24 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function ScheduleMeetingForm() {
+    // Planlanan toplantı ileri bir tarihte; oluşturur oluşturmaz odaya girilmez.
+    const { createMeeting, isLoading, error } = useCreateMeeting({ redirectTo: "dashboard" });
     const {
         register,
         handleSubmit,
-        formState: { errors, isSubmitting },
+        formState: { errors },
     } = useForm<FormData>({ resolver: zodResolver(schema) });
 
     async function onSubmit(data: FormData) {
-        await new Promise((r) => setTimeout(r, 1000));
-        console.log("Schedule meeting:", data);
+        // "YYYY-MM-DD" + "HH:MM" → ISO string
+        const scheduledAt = new Date(`${data.date}T${data.time}:00`).toISOString();
+        await createMeeting({
+            title: data.title,
+            description: data.description,
+            scheduledAt,
+            password: data.password || undefined,
+            isInstant: false,
+        });
     }
 
     return (
@@ -48,7 +58,7 @@ export default function ScheduleMeetingForm() {
                 {...register("description")}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <DatePicker
                     label="Tarih*"
                     error={errors.date?.message}
@@ -68,14 +78,16 @@ export default function ScheduleMeetingForm() {
                 {...register("password")}
             />
 
+            {error && <p className="text-sm text-error">{error}</p>}
+
             <Button
                 type="submit"
                 variant="primary"
                 size="lg"
-                isLoading={isSubmitting}
+                isLoading={isLoading}
                 className="w-full"
             >
-                {isSubmitting ? "Planlanıyor..." : "Toplantıyı Planla"}
+                {isLoading ? "Planlanıyor..." : "Toplantıyı Planla"}
             </Button>
         </form>
     );

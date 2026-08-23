@@ -9,6 +9,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import TextArea from "@/components/ui/TextArea";
 import PasswordInput from "@/components/ui/PasswordInput";
+import { useCreateMeeting } from "@/lib/hooks/useMeetings";
 
 const schema = z.object({
   title: z.string().min(2, "Toplantı adı en az 2 karakter olmalı"),
@@ -21,16 +22,21 @@ type FormData = z.infer<typeof schema>;
 export default function StartMeetingForm() {
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
+  const { createMeeting, isLoading, error } = useCreateMeeting();
 
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   async function onSubmit(data: FormData) {
-    await new Promise((r) => setTimeout(r, 1000));
-    console.log("Start meeting:", data, { micOn, camOn });
+    await createMeeting({
+      title: data.title,
+      description: data.description,
+      password: data.password || undefined,
+      isInstant: true,
+    });
   }
 
   return (
@@ -101,15 +107,18 @@ export default function StartMeetingForm() {
         </button>
       </div>
 
+      {error && <p className="text-sm text-error">{error}</p>}
+
       <Button
         type="submit"
         variant="primary"
         size="lg"
-        isLoading={isSubmitting}
+        isLoading={isLoading}
         className="w-full"
       >
-        {isSubmitting ? "Başlatılıyor..." : "Toplantıyı Başlat"}
+        {isLoading ? "Başlatılıyor..." : "Toplantıyı Başlat"}
       </Button>
     </form>
   );
 }
+
