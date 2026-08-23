@@ -6,10 +6,12 @@ import { z } from "zod";
 import Link from "next/link";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 const schema = z
   .object({
-    name: z.string().min(2, "Ad en az 2 karakter olmalı"),
+    fullName: z.string().min(2, "Ad en az 2 karakter olmalı"),
+    username: z.string().min(3, "Kullanıcı adı en az 3 karakter olmalı").regex(/^[a-z0-9_]+$/, "Sadece küçük harf, rakam ve _ kullanılabilir"),
     email: z.string().email("Geçerli bir e-posta adresi giriniz"),
     password: z.string().min(6, "Şifre en az 6 karakter olmalı"),
     confirmPassword: z.string(),
@@ -22,15 +24,20 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 export default function RegisterForm() {
+  const { register: registerUser, isLoading, error } = useAuth();
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   async function onSubmit(data: FormData) {
-    await new Promise((r) => setTimeout(r, 1200));
-    console.log("Register:", data);
+    await registerUser({
+      fullName: data.fullName,
+      username: data.username,
+      email: data.email,
+      password: data.password,
+    });
   }
 
   return (
@@ -49,8 +56,17 @@ export default function RegisterForm() {
         type="text"
         placeholder="Adın Soyadın"
         autoComplete="name"
-        error={errors.name?.message}
-        {...register("name")}
+        error={errors.fullName?.message}
+        {...register("fullName")}
+      />
+
+      <Input
+        label="Kullanıcı Adı"
+        type="text"
+        placeholder="kullanici_adi"
+        autoComplete="username"
+        error={errors.username?.message}
+        {...register("username")}
       />
 
       <Input
@@ -80,14 +96,18 @@ export default function RegisterForm() {
         {...register("confirmPassword")}
       />
 
+      {error && (
+        <p className="text-sm text-error">{error}</p>
+      )}
+
       <Button
         type="submit"
         variant="primary"
         size="lg"
-        isLoading={isSubmitting}
+        isLoading={isLoading}
         className="w-full mt-2"
       >
-        {isSubmitting ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
+        {isLoading ? "Hesap oluşturuluyor..." : "Hesap Oluştur"}
       </Button>
 
       <p className="text-sm text-center text-muted">

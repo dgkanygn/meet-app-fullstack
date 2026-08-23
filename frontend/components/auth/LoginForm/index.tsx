@@ -6,6 +6,7 @@ import { z } from "zod";
 import Link from "next/link";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 const schema = z.object({
   email: z.string().email("Geçerli bir e-posta adresi giriniz"),
@@ -15,16 +16,15 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function LoginForm() {
+  const { login, isLoading, error } = useAuth();
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   async function onSubmit(data: FormData) {
-    // Simulated request delay
-    await new Promise((r) => setTimeout(r, 1200));
-    console.log("Login:", data);
+    await login(data.email, data.password);
   }
 
   return (
@@ -52,14 +52,18 @@ export default function LoginForm() {
         {...register("password")}
       />
 
+      {error && (
+        <p className="text-sm text-error">{error}</p>
+      )}
+
       <Button
         type="submit"
         variant="primary"
         size="lg"
-        isLoading={isSubmitting}
+        isLoading={isLoading}
         className="w-full mt-2"
       >
-        {isSubmitting ? "Giriş yapılıyor..." : "Giriş Yap"}
+        {isLoading ? "Giriş yapılıyor..." : "Giriş Yap"}
       </Button>
 
       <p className="text-sm text-center text-muted">

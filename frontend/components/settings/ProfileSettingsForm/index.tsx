@@ -1,34 +1,52 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Input from "@/components/ui/Input";
 import TextArea from "@/components/ui/TextArea";
 import Button from "@/components/ui/Button";
+import { useSession } from "@/lib/context/SessionContext";
 
 const schema = z.object({
-  fullname: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
-  description: z.string().optional(),
+  fullName: z.string().min(2, "Ad soyad en az 2 karakter olmalı"),
+  bio: z.string().max(500, "Hakkımda en fazla 500 karakter olabilir").optional(),
 });
 type FormData = z.infer<typeof schema>;
 
 export default function ProfileSettingsForm() {
+  const { profile, isLoading, updateProfile } = useSession();
+  const [error, setError] = useState<string | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
+
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      fullname: "Doğukan",
-      description: "Yazılım Geliştirici",
-    },
-  });
+  } = useForm<FormData>({ resolver: zodResolver(schema) });
+
+  // Profil context'ten geç geldiği için form değerleri yüklenince doldurulur.
+  useEffect(() => {
+    if (profile) {
+      reset({ fullName: profile.fullName, bio: profile.bio ?? "" });
+    }
+  }, [profile, reset]);
 
   async function onSubmit(data: FormData) {
-    await new Promise((r) => setTimeout(r, 1000));
-    console.log("Profile updated:", data);
+    setError(null);
+    setIsSaved(false);
+    try {
+      await updateProfile({ fullName: data.fullName, bio: data.bio ?? "" });
+      setIsSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Profil güncellenemedi.");
+    }
+  }
+
+  if (isLoading) {
+    return <p className="text-sm text-muted">Yükleniyor...</p>;
   }
 
   return (
@@ -37,22 +55,23 @@ export default function ProfileSettingsForm() {
         <Input
           label="Ad Soyad"
           type="text"
-          error={errors.fullname?.message}
-          {...register("fullname")}
+          error={errors.fullName?.message}
+          {...register("fullName")}
         />
         <TextArea
           label="Hakkımda"
           placeholder="Kendinizden bahsedin..."
-          error={errors.description?.message}
-          {...register("description")}
+          error={errors.bio?.message}
+          {...register("bio")}
         />
       </div>
 
-      <Button
-        type="submit"
-        variant="primary"
-        isLoading={isSubmitting}
-      >
+      {error && <p className="text-sm text-error">{error}</p>}
+      {isSaved && !error && (
+        <p className="text-sm text-foreground">Profilin güncellendi.</p>
+      )}
+
+      <Button type="submit" variant="primary" isLoading={isSubmitting}>
         {isSubmitting ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
       </Button>
     </form>
