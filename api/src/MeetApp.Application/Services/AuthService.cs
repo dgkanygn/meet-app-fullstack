@@ -30,9 +30,13 @@ public class AuthService(
         };
 
         await profileRepository.AddAsync(profile, ct);
+
+        // Token'lar profile uzerine yazildiktan sonra tek SaveChanges ile kaydedilir;
+        // aksi halde yeni kaydin refresh token'i veritabanina hic yazilmaz.
+        var response = IssueTokens(profile);
         await profileRepository.SaveChangesAsync(ct);
 
-        return BuildAuthResponse(profile);
+        return response;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken ct = default)
@@ -44,7 +48,11 @@ public class AuthService(
         if (!passwordHasher.Verify(request.Password, profile.PasswordHash))
             throw new UnauthorizedException("Invalid credentials.");
 
-        return BuildAuthResponse(profile, save: true, profileRepository, ct);
+        var response = IssueTokens(profile);
+        profileRepository.Update(profile);
+        await profileRepository.SaveChangesAsync(ct);
+
+        return response;
     }
 
     public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request, CancellationToken ct = default)
@@ -55,7 +63,11 @@ public class AuthService(
         if (profile.RefreshTokenExpiresAt < DateTime.UtcNow)
             throw new UnauthorizedException("Refresh token has expired.");
 
-        return BuildAuthResponse(profile, save: true, profileRepository, ct);
+        var response = IssueTokens(profile);
+        profileRepository.Update(profile);
+        await profileRepository.SaveChangesAsync(ct);
+
+        return response;
     }
 
     public async Task LogoutAsync(RefreshTokenRequest request, CancellationToken ct = default)
@@ -69,9 +81,32 @@ public class AuthService(
         await profileRepository.SaveChangesAsync(ct);
     }
 
-    // Helper
-    private AuthResponse BuildAuthResponse(Profile profile, bool save = false,
-        IProfileRepository? repo = null, CancellationToken ct = default)
+    public async Task ChangePasswordAsync(Guid profileId, ChangePasswordRequest request, CancellationToken ct = default)
+    {
+        var profile = await profileRepository.GetByIdAsync(profileId, ct)
+            ?? throw new NotFoundException("Profile", profileId);
+
+        if (!passwordHasher.Verify(request.CurrentPassword, profile.PasswordHash))
+            throw new ForbiddenException("Current password is incorrect.");
+
+        if (request.NewPassword.Length < 6)
+            throw new BusinessException("New password must be at least 6 characters.");
+
+        profile.PasswordHash = passwordHasher.Hash(request.NewPassword);
+
+        // Sifre degisince eski refresh token gecersiz kilinir.
+        profile.RefreshToken = null;
+        profile.RefreshTokenExpiresAt = null;
+
+        profileRepository.Update(profile);
+        await profileRepository.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Yeni access/refresh token uretir ve refresh token'i profile yazar.
+    /// Kaydetme islemi cagirana birakilir.
+    /// </summary>
+    private AuthResponse IssueTokens(Profile profile)
     {
         var accessToken = tokenService.GenerateAccessToken(profile);
         var refreshToken = tokenService.GenerateRefreshToken();
@@ -79,12 +114,6 @@ public class AuthService(
 
         profile.RefreshToken = refreshToken;
         profile.RefreshTokenExpiresAt = expiry;
-
-        if (save && repo is not null)
-        {
-            repo.Update(profile);
-            _ = repo.SaveChangesAsync(ct);
-        }
 
         var profileDto = new ProfileResponse(
             profile.Id, profile.Username, profile.Email,
