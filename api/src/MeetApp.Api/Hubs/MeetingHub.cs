@@ -60,11 +60,17 @@ public class MeetingHub(IMeetingService meetingService) : Hub
     }
 
     // WebRTC signaling methods
+    //
+    // Her mesajda gonderenin profil id'si de tasinir: teklifi cevaplayan taraf
+    // yalnizca connectionId gorurse karsisindaki katilimciyi isimlendiremez.
+    private string? CurrentUserId => Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+
     public async Task SendOffer(string targetConnectionId, object offer)
     {
         await Clients.Client(targetConnectionId).SendAsync("ReceiveOffer", new
         {
             fromConnectionId = Context.ConnectionId,
+            fromUserId = CurrentUserId,
             offer
         });
     }
@@ -74,6 +80,7 @@ public class MeetingHub(IMeetingService meetingService) : Hub
         await Clients.Client(targetConnectionId).SendAsync("ReceiveAnswer", new
         {
             fromConnectionId = Context.ConnectionId,
+            fromUserId = CurrentUserId,
             answer
         });
     }
@@ -83,6 +90,7 @@ public class MeetingHub(IMeetingService meetingService) : Hub
         await Clients.Client(targetConnectionId).SendAsync("ReceiveIceCandidate", new
         {
             fromConnectionId = Context.ConnectionId,
+            fromUserId = CurrentUserId,
             candidate
         });
     }
