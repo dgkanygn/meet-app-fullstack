@@ -7,121 +7,137 @@ import {
   Calendar,
   Video,
   LogIn,
-  Menu,
   X,
   Zap,
   CalendarPlus,
-  Settings
+  Settings,
+  LogOut,
 } from "lucide-react";
-import { useState } from "react";
+import Avatar from "@/components/ui/Avatar";
+import { useSession } from "@/lib/context/SessionContext";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/calendar", label: "Takvim", icon: Calendar },
-  { href: "/meeting/start", label: "Toplantı Başlat", icon: Video },
-  { href: "/meeting/join", label: "Katıl", icon: LogIn },
-  { href: "/meeting/schedule", label: "Toplantı Planla", icon: CalendarPlus },
+  { href: "/start", label: "Toplantı Başlat", icon: Video },
+  { href: "/join", label: "Katıl", icon: LogIn },
+  { href: "/schedule", label: "Toplantı Planla", icon: CalendarPlus },
   { href: "/settings", label: "Ayarlar", icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  /** Yalnızca mobil drawer'ı ilgilendirir; lg ve üstünde sidebar hep açıktır. */
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const { profile, logout } = useSession();
 
   return (
     <>
-      {/* Mobile overlay */}
-      {!collapsed && (
+      {/* Mobil overlay */}
+      {isOpen && (
         <div
-          className="fixed inset-0 bg-black/30 z-20 lg:hidden"
-          onClick={() => setCollapsed(true)}
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={[
-          "fixed top-0 left-0 z-30 h-full flex flex-col",
+          "fixed top-0 left-0 z-40 h-dvh w-56 flex flex-col",
           "bg-surface border-r border-border",
-          "transition-all duration-200",
-          collapsed ? "w-16" : "w-56",
+          "transition-transform duration-200 ease-out",
+          // Mobilde ekran dışına kayar, lg'den itibaren sabit durur.
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:translate-x-0",
         ].join(" ")}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 h-14 px-4 border-b border-border shrink-0">
-          <div className="w-7 h-7 rounded-[6px] bg-accent flex items-center justify-center shrink-0">
-            <Zap size={14} className="text-accent-fg" />
-          </div>
-          {!collapsed && (
-            <span className="font-semibold text-sm text-foreground tracking-tight">
+        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
+          <Link href="/dashboard" className="flex items-center gap-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-accent">
+              <Zap size={14} className="text-accent-fg" />
+            </div>
+            <span className="text-sm font-semibold tracking-tight text-foreground">
               Meet
             </span>
-          )}
+          </Link>
+
+          {/* Kapatma yalnızca mobilde anlamlı */}
           <button
-            onClick={() => setCollapsed((c) => !c)}
-            className="ml-auto text-muted hover:text-foreground cursor-pointer transition-colors"
-            aria-label="Kenar çubuğunu daralt"
+            onClick={onClose}
+            className="ml-auto cursor-pointer text-muted transition-colors hover:text-foreground lg:hidden"
+            aria-label="Menüyü kapat"
           >
-            {collapsed ? <Menu size={16} /> : <X size={16} />}
+            <X size={18} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 flex flex-col gap-0.5 px-2 overflow-y-auto">
+        <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-2 py-3">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive =
-              pathname === href || pathname.startsWith(href + "/");
+            const isActive = pathname === href || pathname.startsWith(href + "/");
             return (
               <Link
                 key={href}
                 href={href}
-                title={collapsed ? label : undefined}
+                aria-current={isActive ? "page" : undefined}
                 className={[
-                  "flex items-center gap-3 px-2 py-2 rounded-[6px] text-sm cursor-pointer",
-                  "transition-colors duration-150 group",
+                  "group flex items-center gap-3 rounded-[6px] px-2 py-2 text-sm",
+                  "cursor-pointer transition-colors duration-150",
                   isActive
-                    ? "text-accent bg-accent/8 font-medium"
-                    : "text-muted hover:text-foreground hover:bg-border/50",
+                    ? "bg-accent/8 font-medium text-accent"
+                    : "text-muted hover:bg-border/50 hover:text-foreground",
                 ].join(" ")}
               >
                 <Icon
                   size={18}
                   className={
                     isActive
-                      ? "text-accent shrink-0"
-                      : "text-muted group-hover:text-foreground shrink-0"
+                      ? "shrink-0 text-accent"
+                      : "shrink-0 text-muted group-hover:text-foreground"
                   }
                 />
-                {!collapsed && <span className="truncate">{label}</span>}
-                {!collapsed && isActive && (
-                  <span className="ml-auto w-1 h-4 rounded-full bg-accent" />
+                <span className="truncate">{label}</span>
+                {isActive && (
+                  <span className="ml-auto h-4 w-1 rounded-full bg-accent" />
                 )}
               </Link>
             );
           })}
         </nav>
 
-        {/* Bottom */}
-        <div className="px-2 py-3 border-t border-border shrink-0">
+        {/* Alt bölüm */}
+        <div className="shrink-0 space-y-1 border-t border-border px-2 py-3">
           <Link
             href="/profile"
+            className="flex items-center gap-3 rounded-[6px] px-2 py-2 transition-colors hover:bg-border/50"
+          >
+            <Avatar name={profile?.username ?? "?"} size="sm" />
+            <div className="min-w-0 overflow-hidden">
+              <p className="truncate text-xs font-medium text-foreground">
+                {profile?.fullName ?? "—"}
+              </p>
+              <p className="truncate text-xs text-muted">
+                {profile?.email ?? ""}
+              </p>
+            </div>
+          </Link>
+
+          <button
+            onClick={logout}
             className={[
-              "flex items-center gap-3 px-2 py-2 rounded-[6px] hover:bg-border/50 transition-colors cursor-pointer",
-              collapsed ? "justify-center" : "",
+              "flex w-full cursor-pointer items-center gap-3 rounded-[6px] px-2 py-2 text-sm",
+              "text-muted transition-colors duration-150 hover:bg-error/5 hover:text-error",
             ].join(" ")}
           >
-            <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
-              <span className="text-xs font-semibold text-accent">D</span>
-            </div>
-            {!collapsed && (
-              <div className="overflow-hidden">
-                <p className="text-xs font-medium text-foreground truncate">
-                  Dogukan
-                </p>
-                <p className="text-xs text-muted truncate">dogukan@meet.app</p>
-              </div>
-            )}
-          </Link>
+            <LogOut size={16} className="shrink-0" />
+            <span>Çıkış Yap</span>
+          </button>
         </div>
       </aside>
     </>
