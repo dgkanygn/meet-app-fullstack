@@ -15,3 +15,16 @@ public record UpdateProfileRequest(
     string? Bio,
     string? AvatarUrl
 );
+
+/// <summary>
+/// Kullanici arama sonucu — e-posta gibi hassas alanlar disarida birakilir.
+/// ConnectionStatus, arayan kullanici ile bu profil arasindaki mevcut baglanti
+/// durumudur; hic baglanti yoksa null olur.
+/// </summary>
+public record ProfileSearchResponse(
+    Guid Id,
+    string Username,
+    string FullName,
+    string? AvatarUrl,
+    Domain.Enums.ConnectionStatus? ConnectionStatus
+);

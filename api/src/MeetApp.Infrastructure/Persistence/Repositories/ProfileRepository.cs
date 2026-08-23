@@ -20,4 +20,18 @@ public class ProfileRepository(AppDbContext context) : GenericRepository<Profile
 
     public async Task<bool> ExistsByUsernameAsync(string username, CancellationToken ct = default) =>
         await _set.AnyAsync(p => p.Username == username, ct);
+
+    public async Task<IEnumerable<Profile>> SearchAsync(string term, Guid excludeProfileId, int limit, CancellationToken ct = default)
+    {
+        var pattern = $"%{term}%";
+
+        return await _set
+            .Where(p => p.Id != excludeProfileId &&
+                        (EF.Functions.ILike(p.Username, pattern) ||
+                         EF.Functions.ILike(p.FullName, pattern) ||
+                         EF.Functions.ILike(p.Email, pattern)))
+            .OrderBy(p => p.Username)
+            .Take(limit)
+            .ToListAsync(ct);
+    }
 }

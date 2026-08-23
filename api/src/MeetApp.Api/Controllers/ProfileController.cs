@@ -1,4 +1,5 @@
 using MeetApp.Application.Dtos;
+using MeetApp.Application.Dtos.Auth;
 using MeetApp.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,6 +22,20 @@ public class ProfileController(IProfileService profileService) : BaseController
     {
         var result = await profileService.UpdateMyProfileAsync(CurrentUserId, request, ct);
         return Ok(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string q, [FromQuery] int limit, CancellationToken ct)
+    {
+        var result = await profileService.SearchProfilesAsync(CurrentUserId, q ?? string.Empty, limit <= 0 ? 10 : limit, ct);
+        return Ok(result);
+    }
+
+    [HttpDelete("me")]
+    public async Task<IActionResult> DeleteMe([FromBody] DeleteAccountRequest request, CancellationToken ct)
+    {
+        await profileService.DeleteMyAccountAsync(CurrentUserId, request.Password, ct);
+        return NoContent();
     }
 
     [HttpGet("{id:guid}")]
