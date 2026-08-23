@@ -1,29 +1,50 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { X, Search, Link as LinkIcon, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Avatar from "@/components/ui/Avatar";
-import { X, Search, Link as LinkIcon } from "lucide-react";
+import { profileService } from "@/lib/services/profileService";
+import { connectionService } from "@/lib/services/connectionService";
+import type { ProfileSearchResponse } from "@/lib/types";
 
-// Mock API responses for search
-const MOCK_USERS = [
-  { id: "1", fullname: "Ahmet Yılmaz", username: "ahmetyilmaz", email: "ahmet@example.com" },
-  { id: "2", fullname: "Ayşe Demir", username: "aysedemir", email: "ayse@example.com" },
-  { id: "3", fullname: "Mehmet Kaya", username: "mehmetkaya", email: "mehmet@example.com" },
-  { id: "4", fullname: "Elif Yücel", username: "elifyucel", email: "elif@example.com" },
-  { id: "5", fullname: "Can Özkan", username: "canozkan", email: "can@example.com" },
-];
+/** Backend en az 2 karakterde sonuç döndürüyor. */
+const MIN_QUERY_LENGTH = 2;
+const DEBOUNCE_MS = 300;
 
-export default function UserInvite() {
+const STATUS_LABELS: Record<string, string> = {
+  Pending: "İstek gönderildi",
+  Accepted: "Zaten bağlısınız",
+  Rejected: "Reddedildi",
+  Blocked: "Engellendi",
+};
+
+interface UserInviteProps {
+  /** Bağlantı isteği başarıyla gönderildiğinde tetiklenir. */
+  onSent?: () => void;
+}
+
+export default function UserInvite({ onSent }: UserInviteProps) {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ProfileSearchResponse[]>([]);
+  /** Elimizdeki sonuçların ait olduğu arama terimi. */
+  const [searchedTerm, setSearchedTerm] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<typeof MOCK_USERS>([]);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [isSending, setIsSending] = useState(false);
 
+  const [selected, setSelected] = useState<ProfileSearchResponse[]>([]);
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Dışarı tıklayınca sonuç listesini kapat
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -31,54 +52,108 @@ export default function UserInvite() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filteredUsers = MOCK_USERS.filter(
-    (user) =>
-      (user.username.toLowerCase().includes(query.toLowerCase()) ||
-        user.email.toLowerCase().includes(query.toLowerCase()) ||
-        user.fullname.toLowerCase().includes(query.toLowerCase())) &&
-      !selectedUsers.find((u) => u.id === user.id)
+  // Debounce'lu arama — her tuş vuruşunda istek atmamak için.
+  // Sonuçların hangi terime ait olduğunu tutuyoruz; "aranıyor" durumu
+  // buradan türetiliyor, efekt içinde senkron setState yapılmıyor.
+  const term = query.trim();
+  const isTermSearchable = term.length >= MIN_QUERY_LENGTH;
+  const isSearching = isTermSearchable && searchedTerm !== term;
+
+  useEffect(() => {
+    if (!isTermSearchable) return;
+
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        const data = await profileService.search(term);
+        if (!cancelled) setResults(data);
+      } catch {
+        if (!cancelled) setResults([]);
+      } finally {
+        if (!cancelled) setSearchedTerm(term);
+      }
+    }, DEBOUNCE_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [term, isTermSearchable]);
+
+  const visibleResults = (searchedTerm === term ? results : []).filter(
+    (user) => !selected.some((s) => s.id === user.id)
   );
 
-  const handleSelect = (user: typeof MOCK_USERS[0]) => {
-    setSelectedUsers([...selectedUsers, user]);
+  function handleSelect(user: ProfileSearchResponse) {
+    // Zaten bağlantısı olan kullanıcı tekrar seçilemez.
+    if (user.connectionStatus) return;
+    setSelected((prev) => [...prev, user]);
     setQuery("");
     setIsOpen(false);
-  };
+    setSuccessMessage(null);
+  }
 
-  const handleRemove = (id: string) => {
-    setSelectedUsers(selectedUsers.filter((u) => u.id !== id));
-  };
+  function handleRemove(id: string) {
+    setSelected((prev) => prev.filter((u) => u.id !== id));
+  }
 
-  const handleInvite = async () => {
-    if (selectedUsers.length === 0) return;
+  async function handleInvite() {
+    if (selected.length === 0) return;
+
     setIsSending(true);
-    // Simulate API request
-    await new Promise((r) => setTimeout(r, 1000));
+    setError(null);
+    setSuccessMessage(null);
+
+    const outcomes = await Promise.allSettled(
+      selected.map((user) => connectionService.create(user.id))
+    );
+
+    const failed = outcomes.filter((o) => o.status === "rejected");
+    const sentCount = outcomes.length - failed.length;
+
+    if (sentCount > 0) {
+      setSuccessMessage(`${sentCount} bağlantı isteği gönderildi.`);
+      onSent?.();
+    }
+    if (failed.length > 0) {
+      const first = failed[0] as PromiseRejectedResult;
+      setError(
+        first.reason instanceof Error
+          ? first.reason.message
+          : "Bazı istekler gönderilemedi."
+      );
+    }
+
+    setSelected([]);
     setIsSending(false);
-    setSelectedUsers([]);
-    alert("Bağlantı daveti başarıyla gönderildi!");
-  };
+  }
 
   return (
-    <div className="bg-surface border border-border rounded-[8px] p-5 space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <LinkIcon size={18} className="text-muted" />
-        <h2 className="text-sm font-semibold text-foreground">Kullanıcıya Bağlantı Gönder</h2>
+    <div className="space-y-4 rounded-[8px] border border-border bg-surface p-4 sm:p-5">
+      <div className="flex items-center gap-2">
+        <LinkIcon size={18} className="shrink-0 text-muted" />
+        <h2 className="text-sm font-semibold text-foreground">
+          Kullanıcıya Bağlantı Gönder
+        </h2>
       </div>
 
-      <div className="w-full flex flex-col gap-3">
-        {selectedUsers.length > 0 && (
+      <div className="flex w-full flex-col gap-3">
+        {selected.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {selectedUsers.map((user) => (
+            {selected.map((user) => (
               <div
                 key={user.id}
-                className="flex items-center gap-2 bg-accent/10 border border-accent/20 px-2.5 py-1.5 rounded-[6px]"
+                className="flex items-center gap-2 rounded-[6px] border border-accent/20 bg-accent/10 px-2.5 py-1.5"
               >
                 <Avatar name={user.username} size="sm" />
-                <span className="text-xs font-medium text-accent">{user.fullname}</span>
+                <span className="max-w-[140px] truncate text-xs font-medium text-accent">
+                  {user.fullName}
+                </span>
                 <button
                   onClick={() => handleRemove(user.id)}
-                  className="text-accent hover:text-accent/80 transition-colors cursor-pointer"
+                  className="cursor-pointer text-accent transition-colors hover:text-accent/80"
+                  aria-label={`${user.fullName} seçimini kaldır`}
                 >
                   <X size={14} />
                 </button>
@@ -87,10 +162,16 @@ export default function UserInvite() {
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row items-start gap-3" ref={wrapperRef}>
-          <div className="relative flex-1 w-full">
+        <div
+          className="flex flex-col items-start gap-3 sm:flex-row"
+          ref={wrapperRef}
+        >
+          <div className="relative w-full flex-1">
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+              <Search
+                size={16}
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-muted"
+              />
               <input
                 type="text"
                 placeholder="İsim, kullanıcı adı veya e-posta ara..."
@@ -100,31 +181,56 @@ export default function UserInvite() {
                   setIsOpen(true);
                 }}
                 onFocus={() => setIsOpen(true)}
-                className="w-full pl-9 pr-3 py-2 text-sm rounded-[6px] bg-background text-foreground placeholder:text-muted border border-border focus:border-foreground transition-colors duration-150 outline-none"
+                autoComplete="off"
+                className="w-full rounded-[6px] border border-border bg-background py-2 pr-3 pl-9 text-sm text-foreground outline-none transition-colors duration-150 placeholder:text-muted focus:border-foreground"
               />
             </div>
 
-            {isOpen && query.length > 0 && (
-              <div className="absolute top-[calc(100%+4px)] left-0 right-0 bg-surface border border-border rounded-[8px] shadow-[var(--shadow-floating)] z-20 max-h-60 overflow-y-auto py-1">
-                {filteredUsers.length > 0 ? (
-                  <div className="flex flex-col px-1">
-                    {filteredUsers.map((user) => (
-                      <button
-                        key={user.id}
-                        onClick={() => handleSelect(user)}
-                        className="flex items-center gap-3 p-2 hover:bg-border/50 rounded-[6px] transition-colors cursor-pointer text-left"
-                      >
-                        <Avatar name={user.username} size="md" />
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{user.fullname}</p>
-                          <p className="text-xs text-muted">@{user.username}</p>
-                        </div>
-                      </button>
-                    ))}
+            {isOpen && isTermSearchable && (
+              <div className="absolute top-[calc(100%+4px)] right-0 left-0 z-20 max-h-60 overflow-y-auto rounded-[8px] border border-border bg-surface py-1 shadow-[var(--shadow-floating)]">
+                {isSearching && (
+                  <div className="p-4 text-center text-sm text-muted">
+                    Aranıyor...
                   </div>
-                ) : (
+                )}
+
+                {!isSearching && visibleResults.length === 0 && (
                   <div className="p-4 text-center text-sm text-muted">
                     Kullanıcı bulunamadı.
+                  </div>
+                )}
+
+                {!isSearching && visibleResults.length > 0 && (
+                  <div className="flex flex-col px-1">
+                    {visibleResults.map((user) => {
+                      const statusLabel = user.connectionStatus
+                        ? STATUS_LABELS[user.connectionStatus]
+                        : null;
+
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => handleSelect(user)}
+                          disabled={!!user.connectionStatus}
+                          className="flex items-center gap-3 rounded-[6px] p-2 text-left transition-colors hover:bg-border/50 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+                        >
+                          <Avatar name={user.username} size="md" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">
+                              {user.fullName}
+                            </p>
+                            <p className="truncate text-xs text-muted">
+                              @{user.username}
+                            </p>
+                          </div>
+                          {statusLabel && (
+                            <span className="shrink-0 text-xs text-muted">
+                              {statusLabel}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -135,13 +241,21 @@ export default function UserInvite() {
             type="button"
             variant="primary"
             onClick={handleInvite}
-            disabled={selectedUsers.length === 0 || isSending}
+            disabled={selected.length === 0 || isSending}
             isLoading={isSending}
-            className="w-full sm:w-auto shrink-0"
+            className="w-full shrink-0 sm:w-auto"
           >
             Gönder
           </Button>
         </div>
+
+        {error && <p className="text-sm text-error">{error}</p>}
+        {successMessage && (
+          <p className="flex items-center gap-1.5 text-sm text-foreground">
+            <Check size={14} className="text-accent" />
+            {successMessage}
+          </p>
+        )}
       </div>
     </div>
   );
