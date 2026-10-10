@@ -27,7 +27,10 @@ public record MeetingResponse(
     bool IsInstant,
     bool HasPassword,
     int MaxParticipants,
-    DateTime CreatedAt
+    DateTime CreatedAt,
+    DateTime? EndedAt = null,
+    IEnumerable<ParticipantResponse>? Participants = null,
+    IEnumerable<Guid>? ActiveParticipantIds = null
 );
 
 public record MeetingDetailResponse(
@@ -41,5 +44,7 @@ public record MeetingDetailResponse(
     bool HasPassword,
     int MaxParticipants,
     DateTime CreatedAt,
-    IEnumerable<ParticipantResponse> Participants
+    DateTime? EndedAt,
+    IEnumerable<ParticipantResponse> Participants,
+    IEnumerable<Guid>? ActiveParticipantIds = null
 );

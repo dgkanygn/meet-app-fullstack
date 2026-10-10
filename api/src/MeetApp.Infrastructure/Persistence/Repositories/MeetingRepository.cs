@@ -18,13 +18,16 @@ public class MeetingRepository(AppDbContext context) : GenericRepository<Meeting
         var now = DateTime.UtcNow;
         var query = _set
             .Include(m => m.Host)
+            .Include(m => m.Participants)
+                .ThenInclude(p => p.Profile)
             .Where(m => m.HostId == profileId || m.Participants.Any(p => p.ProfileId == profileId));
 
         query = scope switch
         {
             "hosted" => query.Where(m => m.HostId == profileId),
-            "upcoming" => query.Where(m => m.ScheduledAt == null || m.ScheduledAt > now),
-            "past" => query.Where(m => m.ScheduledAt != null && m.ScheduledAt <= now),
+            "upcoming" => query.Where(m => m.EndedAt == null && (m.ScheduledAt == null || m.ScheduledAt > now)),
+            "past" => query.Where(m => m.EndedAt != null || (m.ScheduledAt != null && m.ScheduledAt <= now)),
+            "live" => query.Where(m => m.EndedAt == null),
             _ => query
         };
 

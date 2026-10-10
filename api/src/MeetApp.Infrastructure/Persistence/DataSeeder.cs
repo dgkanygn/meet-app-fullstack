@@ -16,6 +16,15 @@ public static class DataSeeder
         var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("DataSeeder");
 
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync("ALTER TABLE meetings ADD COLUMN IF NOT EXISTS \"EndedAt\" timestamp with time zone;");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not alter meetings table for EndedAt column.");
+        }
+
         if (!await context.Profiles.AnyAsync())
         {
             logger.LogInformation("Veritabanı boş, seed verileri ekleniyor...");

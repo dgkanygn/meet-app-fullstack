@@ -33,8 +33,7 @@ export default function NotificationsDropdown() {
     setActionError(null);
     try {
       await connectionService.update(notification.referenceId, status);
-      await markAsRead(notification.id);
-      dismiss(notification.id);
+      await dismiss(notification.id);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "İşlem başarısız.");
     } finally {
@@ -109,7 +108,8 @@ export default function NotificationsDropdown() {
               {notifications.map((notification) => {
                 const isConnectionRequest =
                   notification.type === "ConnectionRequest" &&
-                  !!notification.referenceId;
+                  !!notification.referenceId &&
+                  !notification.isRead;
                 const isPending = pendingId === notification.id;
 
                 return (

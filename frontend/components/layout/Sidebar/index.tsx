@@ -12,12 +12,14 @@ import {
   CalendarPlus,
   Settings,
   LogOut,
+  ListVideo,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { useSession } from "@/lib/context/SessionContext";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/meetings", label: "Toplantılar", icon: ListVideo },
   { href: "/calendar", label: "Takvim", icon: Calendar },
   { href: "/start", label: "Toplantı Başlat", icon: Video },
   { href: "/join", label: "Katıl", icon: LogIn },

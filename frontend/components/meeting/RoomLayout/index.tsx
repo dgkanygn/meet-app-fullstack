@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, Copy, Check, X, ArrowLeft } from "lucide-react";
+import { Zap, Copy, Check, X, ArrowLeft, Clock } from "lucide-react";
 import VideoGrid from "@/components/meeting/VideoGrid";
 import ControlBar from "@/components/meeting/ControlBar";
 import Avatar from "@/components/ui/Avatar";
@@ -121,6 +121,37 @@ export default function RoomLayout({ meetingId }: RoomLayoutProps) {
     } catch {
       /* pano erişimi yoksa sessizce geç */
     }
+  }
+
+  // Toplantı süresi dolmuş / sona ermiş
+  const isExpired =
+    !!meeting?.endedAt ||
+    admissionError === "Bu davet bağlantısı eskimiş." ||
+    meetingError === "Bu davet bağlantısı eskimiş.";
+
+  if (isExpired && !meetingLoading) {
+    return (
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-[#171512] px-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#332F2A] bg-[#201E1B] text-[#A39C93]">
+          <Clock size={20} />
+        </div>
+        <div className="space-y-1">
+          <h1 className="text-base font-semibold text-[#F2EFEA]">
+            Bu davet bağlantısı eskimiş
+          </h1>
+          <p className="max-w-sm text-xs text-[#A39C93]">
+            Toplantı sona erdi veya tüm katılımcılar ayrıldı. Bu bağlantı artık kullanılamaz.
+          </p>
+        </div>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="mt-2 flex cursor-pointer items-center gap-2 rounded-[6px] border border-[#332F2A] bg-[#201E1B] px-4 py-2 text-xs font-medium text-[#F2EFEA] transition-colors hover:bg-[#332F2A]"
+        >
+          <ArrowLeft size={14} />
+          Dashboard&apos;a dön
+        </button>
+      </div>
+    );
   }
 
   // Toplantı bulunamadı / erişim yok

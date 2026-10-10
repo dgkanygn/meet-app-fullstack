@@ -8,7 +8,7 @@ import {
 } from "@/lib/services/meetingService";
 import type { MeetingResponse } from "@/lib/types";
 
-type Scope = "hosted" | "upcoming" | "past" | undefined;
+type Scope = "hosted" | "upcoming" | "past" | "live" | undefined;
 
 /**
  * Toplantı listesini yükler.

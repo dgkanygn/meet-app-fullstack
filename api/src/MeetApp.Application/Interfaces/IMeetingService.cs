@@ -11,5 +11,6 @@ public interface IMeetingService
     Task DeleteMeetingAsync(Guid id, Guid hostId, CancellationToken ct = default);
     Task JoinMeetingAsync(Guid id, Guid profileId, string? password = null, CancellationToken ct = default);
     Task LeaveMeetingAsync(Guid id, Guid profileId, CancellationToken ct = default);
+    Task EndMeetingAsync(Guid id, CancellationToken ct = default);
     Task<bool> IsParticipantAsync(Guid meetingId, Guid profileId, CancellationToken ct = default);
 }

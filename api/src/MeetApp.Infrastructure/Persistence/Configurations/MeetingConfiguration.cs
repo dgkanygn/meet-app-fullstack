@@ -12,6 +12,7 @@ public class MeetingConfiguration : IEntityTypeConfiguration<Meeting>
         builder.Property(m => m.Title).HasMaxLength(200).IsRequired();
         builder.Property(m => m.Description).HasMaxLength(1000);
         builder.Property(m => m.Password).HasMaxLength(100);
+        builder.Property(m => m.EndedAt);
 
         builder.HasOne(m => m.Host)
             .WithMany(p => p.HostedMeetings)

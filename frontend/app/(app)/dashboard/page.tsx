@@ -6,22 +6,11 @@ import QuickActions from "@/components/dashboard/QuickActions";
 import UserInvite from "@/components/ui/UserInvite";
 import { useMeetings } from "@/lib/hooks/useMeetings";
 import { useSession } from "@/lib/context/SessionContext";
-import { formatDateTime, parseApiDate } from "@/lib/utils/date";
-import type { MeetingResponse, MeetingStatus } from "@/lib/types";
-
-/**
- * Backend toplantı durumu tutmuyor; UI için tarihten türetiyoruz.
- * Anlık toplantılar oluşturuldukları an canlı sayılır.
- */
-function getMeetingStatus(meeting: MeetingResponse): MeetingStatus {
-  if (meeting.isInstant) return "live";
-  if (!meeting.scheduledAt) return "upcoming";
-  return parseApiDate(meeting.scheduledAt) <= new Date() ? "ended" : "upcoming";
-}
+import { formatDateTime } from "@/lib/utils/date";
 
 export default function DashboardPage() {
   const { profile } = useSession();
-  const { meetings, isLoading, error, refetch } = useMeetings("upcoming");
+  const { meetings, isLoading, error, refetch } = useMeetings("past");
 
   return (
     <div className="mx-auto max-w-5xl space-y-8">
@@ -37,9 +26,17 @@ export default function DashboardPage() {
           <h2 className="text-sm font-semibold text-foreground">Kişi Ekleyin</h2>
           <UserInvite />
 
-          <h2 className="pt-4 text-sm font-semibold text-foreground">
-            Yaklaşan Toplantılar
-          </h2>
+          <div className="flex items-center justify-between pt-4">
+            <h2 className="text-sm font-semibold text-foreground">
+              Geçmiş Toplantılar
+            </h2>
+            <Link
+              href="/meetings"
+              className="text-xs text-muted transition-colors hover:text-foreground"
+            >
+              Tüm Toplantılar &rarr;
+            </Link>
+          </div>
 
           {isLoading && <p className="text-sm text-muted">Yükleniyor...</p>}
 
@@ -57,30 +54,55 @@ export default function DashboardPage() {
 
           {!isLoading && !error && meetings.length === 0 && (
             <div className="rounded-[8px] border border-border bg-surface p-6 text-center">
-              <p className="text-sm text-muted">Henüz toplantın yok.</p>
+              <p className="text-sm text-muted">Henüz tamamlanmış bir toplantı bulunmuyor.</p>
               <Link
                 href="/start"
                 className="mt-2 inline-block cursor-pointer text-sm text-accent hover:underline"
               >
-                İlk toplantını başlat
+                Yeni bir toplantı başlat
               </Link>
             </div>
           )}
 
-          {meetings.map((meeting) => (
-            <MeetingCard
-              key={meeting.id}
-              id={meeting.id}
-              title={meeting.title}
-              time={
-                meeting.scheduledAt
-                  ? formatDateTime(meeting.scheduledAt)
-                  : "Anlık toplantı"
-              }
-              participants={meeting.maxParticipants}
-              status={getMeetingStatus(meeting)}
-            />
-          ))}
+          {meetings.map((meeting) => {
+            // Katılan kişiler: Kabul edilmiş katılımcılar ve host
+            const attendees = (meeting.participants ?? [])
+              .filter((p) => p.status === "Accepted")
+              .map((p) => ({
+                id: p.profileId,
+                fullName: p.profileFullName,
+                username: p.profileUsername,
+                avatarUrl: p.profileAvatarUrl,
+              }));
+
+            // Host listede yoksa ekle
+            if (meeting.hostId && !attendees.some((a) => a.id === meeting.hostId)) {
+              attendees.unshift({
+                id: meeting.hostId,
+                fullName: meeting.hostFullName,
+                username: meeting.hostFullName.toLowerCase().replace(/\s+/g, ""),
+                avatarUrl: null,
+              });
+            }
+
+            return (
+              <MeetingCard
+                key={meeting.id}
+                id={meeting.id}
+                title={meeting.title}
+                time={
+                  meeting.endedAt
+                    ? `${formatDateTime(meeting.endedAt)}`
+                    : meeting.scheduledAt
+                      ? formatDateTime(meeting.scheduledAt)
+                      : formatDateTime(meeting.createdAt)
+                }
+                participants={meeting.maxParticipants}
+                status="ended"
+                attendees={attendees}
+              />
+            );
+          })}
         </div>
 
         <QuickActions />

@@ -32,6 +32,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // NotificationPublisher — Api katmanında, IHubContext bağımlılığından dolayı burada kayıtlı
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
+builder.Services.AddSingleton<IMeetingRoomTracker, MeetingRoomTracker>();
 
 // SignalR — hub payload'lari da REST ile ayni JSON sekline sahip olsun
 builder.Services.AddSignalR()
@@ -134,6 +135,15 @@ app.MapControllers();
 // SignalR Hubs
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<MeetingHub>("/hubs/meeting");
+
+// Empty Room Shutdown Callback
+var roomTracker = app.Services.GetRequiredService<IMeetingRoomTracker>();
+roomTracker.SetEmptyRoomShutdownCallback(async meetingId =>
+{
+    using var scope = app.Services.CreateScope();
+    var meetingService = scope.ServiceProvider.GetRequiredService<IMeetingService>();
+    await meetingService.EndMeetingAsync(meetingId);
+});
 
 // Seed Data
 try

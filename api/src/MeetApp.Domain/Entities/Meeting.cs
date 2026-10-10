@@ -13,6 +13,7 @@ public class Meeting
     public string? Password { get; set; }
     public int MaxParticipants { get; set; } = 4;
     public DateTime CreatedAt { get; set; }
+    public DateTime? EndedAt { get; set; }
 
     // Navigation
     public Profile Host { get; set; } = null!;

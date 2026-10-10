@@ -47,6 +47,9 @@ export interface MeetingResponse {
   hasPassword: boolean;
   maxParticipants: number;
   createdAt: string;
+  endedAt?: string | null;
+  participants?: ParticipantResponse[];
+  activeParticipantIds?: string[];
 }
 
 export type MeetingParticipantStatus =
@@ -69,6 +72,7 @@ export interface ParticipantResponse {
 
 export interface MeetingDetailResponse extends MeetingResponse {
   participants: ParticipantResponse[];
+  activeParticipantIds?: string[];
 }
 
 /** UI tarafinda turetilen durum — backend'de boyle bir alan yok. */

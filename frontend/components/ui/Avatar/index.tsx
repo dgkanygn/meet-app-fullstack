@@ -4,11 +4,12 @@ import { useMemo } from "react";
 
 interface AvatarProps {
   name: string;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
 }
 
 const sizeClasses = {
+  xs: "w-5 h-5 text-[10px]",
   sm: "w-7 h-7 text-xs",
   md: "w-10 h-10 text-sm",
   lg: "w-16 h-16 text-lg",

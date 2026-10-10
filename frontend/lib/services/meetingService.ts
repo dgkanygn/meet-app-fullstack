@@ -23,7 +23,9 @@ export interface UpdateMeetingPayload {
 }
 
 export const meetingService = {
-  getMyMeetings(scope?: "hosted" | "upcoming" | "past"): Promise<MeetingResponse[]> {
+  getMyMeetings(
+    scope?: "hosted" | "upcoming" | "past" | "live"
+  ): Promise<MeetingResponse[]> {
     const qs = scope ? `?scope=${scope}` : "";
     return api.get<MeetingResponse[]>(`/api/meetings${qs}`);
   },

@@ -28,4 +28,11 @@ public class NotificationController(INotificationService notificationService) : 
         await notificationService.MarkAllAsReadAsync(CurrentUserId, ct);
         return NoContent();
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await notificationService.DeleteNotificationAsync(id, CurrentUserId, ct);
+        return NoContent();
+    }
 }

@@ -24,8 +24,8 @@ interface NotificationContextValue {
   error: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
-  /** Bir bildirime aksiyon alındıktan sonra listeden düşürmek için. */
-  dismiss: (id: string) => void;
+  /** Bir bildirime aksiyon alındıktan sonra listeden ve backend'den düşürmek için. */
+  dismiss: (id: string) => Promise<void> | void;
   refresh: () => void;
 }
 
@@ -98,8 +98,13 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
   }, []);
 
-  const dismiss = useCallback((id: string) => {
+  const dismiss = useCallback(async (id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id));
+    try {
+      await notificationService.delete(id);
+    } catch {
+      // Silme isteği başarısız olsa da yerel listeden kaldırılmış kalır
+    }
   }, []);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;

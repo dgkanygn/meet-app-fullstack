@@ -6,22 +6,22 @@ using Microsoft.AspNetCore.SignalR;
 namespace MeetApp.Api.Hubs;
 
 [Authorize]
-public class MeetingHub(IMeetingService meetingService) : Hub
+public class MeetingHub(IMeetingService meetingService, IMeetingRoomTracker meetingRoomTracker) : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        var meetingId = Context.GetHttpContext()?.Request.Query["meetingId"].ToString();
-        var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var meetingIdStr = Context.GetHttpContext()?.Request.Query["meetingId"].ToString();
+        var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (string.IsNullOrEmpty(meetingId) || string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(meetingIdStr) || string.IsNullOrEmpty(userIdStr) ||
+            !Guid.TryParse(meetingIdStr, out var meetingId) || !Guid.TryParse(userIdStr, out var userId))
         {
             Context.Abort();
             return;
         }
 
         // Kullanıcının bu toplantıya erişimi var mı kontrol et
-        var isParticipant = await meetingService.IsParticipantAsync(
-            Guid.Parse(meetingId), Guid.Parse(userId));
+        var isParticipant = await meetingService.IsParticipantAsync(meetingId, userId);
 
         if (!isParticipant)
         {
@@ -29,12 +29,14 @@ public class MeetingHub(IMeetingService meetingService) : Hub
             return;
         }
 
+        meetingRoomTracker.TrackUserJoined(meetingId, userId, Context.ConnectionId);
+
         await Groups.AddToGroupAsync(Context.ConnectionId, $"meeting-{meetingId}");
 
         // Diğer katılımcılara haber ver
         await Clients.OthersInGroup($"meeting-{meetingId}").SendAsync("UserJoined", new
         {
-            userId,
+            userId = userIdStr,
             connectionId = Context.ConnectionId
         });
 
@@ -43,14 +45,16 @@ public class MeetingHub(IMeetingService meetingService) : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var meetingId = Context.GetHttpContext()?.Request.Query["meetingId"].ToString();
-        var userId = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var meetingIdStr = Context.GetHttpContext()?.Request.Query["meetingId"].ToString();
+        var userIdStr = Context.User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
-        if (!string.IsNullOrEmpty(meetingId))
+        if (!string.IsNullOrEmpty(meetingIdStr) && Guid.TryParse(meetingIdStr, out var meetingId))
         {
+            meetingRoomTracker.TrackUserLeft(meetingId, Context.ConnectionId);
+
             await Clients.OthersInGroup($"meeting-{meetingId}").SendAsync("UserLeft", new
             {
-                userId,
+                userId = userIdStr,
                 connectionId = Context.ConnectionId
             });
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"meeting-{meetingId}");

@@ -31,4 +31,16 @@ public class NotificationService(INotificationRepository notificationRepository)
     {
         await notificationRepository.MarkAllAsReadAsync(profileId, ct);
     }
+
+    public async Task DeleteNotificationAsync(Guid id, Guid profileId, CancellationToken ct = default)
+    {
+        var notification = await notificationRepository.GetByIdAsync(id, ct)
+            ?? throw new NotFoundException("Notification", id);
+
+        if (notification.RecipientId != profileId)
+            throw new ForbiddenException("Cannot delete another user's notification.");
+
+        notificationRepository.Remove(notification);
+        await notificationRepository.SaveChangesAsync(ct);
+    }
 }

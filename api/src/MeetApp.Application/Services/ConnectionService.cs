@@ -84,6 +84,15 @@ public class ConnectionService(
         connectionRepository.Update(connection);
         await connectionRepository.SaveChangesAsync(ct);
 
+        // İstek onaylandığında/reddedildiğinde bekleyen istek bildirimini kaldır
+        var existingNotifs = await notificationRepository.GetByRecipientIdAsync(requesterId, null, ct);
+        var requestNotif = existingNotifs.FirstOrDefault(n => n.ReferenceId == id && n.Type == NotificationType.ConnectionRequest);
+        if (requestNotif is not null)
+        {
+            notificationRepository.Remove(requestNotif);
+            await notificationRepository.SaveChangesAsync(ct);
+        }
+
         // Notify requester if accepted
         if (request.Status == ConnectionStatus.Accepted)
         {
