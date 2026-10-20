@@ -20,4 +20,7 @@ public class Profile
     public ICollection<Connection> ReceivedConnections { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<CalendarNote> CalendarNotes { get; set; } = [];
+    public ICollection<DirectMessage> SentMessages { get; set; } = [];
+    public ICollection<DirectMessage> ReceivedMessages { get; set; } = [];
 }
+

@@ -154,3 +154,36 @@ export interface ApiError {
   status: number;
   message: string;
 }
+
+// ─── Direct Messages ─────────────────────────────────────────────────────────
+export interface DirectMessageResponse {
+  id: string;
+  senderId: string;
+  senderFullName: string;
+  senderUsername: string;
+  senderAvatarUrl?: string | null;
+  receiverId: string;
+  receiverFullName: string;
+  receiverUsername: string;
+  receiverAvatarUrl?: string | null;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface SendMessageRequest {
+  receiverId: string;
+  content: string;
+}
+
+export interface ConversationSummaryResponse {
+  otherUserId: string;
+  otherUserFullName: string;
+  otherUserUsername: string;
+  otherUserAvatarUrl?: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+  lastMessageSenderId: string;
+}
+

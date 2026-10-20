@@ -15,6 +15,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IConnectionService, ConnectionService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<ICalendarNoteService, CalendarNoteService>();
+        services.AddScoped<IMessageService, MessageService>();
         return services;
+
     }
 }

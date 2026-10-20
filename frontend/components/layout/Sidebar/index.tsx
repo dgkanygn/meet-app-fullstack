@@ -13,12 +13,14 @@ import {
   Settings,
   LogOut,
   ListVideo,
+  MessageSquare,
 } from "lucide-react";
 import Avatar from "@/components/ui/Avatar";
 import { useSession } from "@/lib/context/SessionContext";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/messages", label: "Mesajlaşma", icon: MessageSquare },
   { href: "/meetings", label: "Toplantılar", icon: ListVideo },
   { href: "/calendar", label: "Takvim", icon: Calendar },
   { href: "/start", label: "Toplantı Başlat", icon: Video },
@@ -105,9 +107,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   }
                 />
                 <span className="truncate">{label}</span>
-                {isActive && (
-                  <span className="ml-auto h-4 w-1 rounded-full bg-accent" />
-                )}
               </Link>
             );
           })}

@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Connection> Connections => Set<Connection>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<CalendarNote> CalendarNotes => Set<CalendarNote>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

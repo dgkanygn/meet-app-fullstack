@@ -33,6 +33,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 // NotificationPublisher — Api katmanında, IHubContext bağımlılığından dolayı burada kayıtlı
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
 builder.Services.AddScoped<IMeetingRealtimeNotifier, MeetingRealtimeNotifier>();
+builder.Services.AddScoped<IMessageRealtimeNotifier, MessageRealtimeNotifier>();
 builder.Services.AddSingleton<IMeetingRoomTracker, MeetingRoomTracker>();
 
 // SignalR — hub payload'lari da REST ile ayni JSON sekline sahip olsun
@@ -70,7 +71,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
                 if (!string.IsNullOrEmpty(accessToken) &&
-                    (path.StartsWithSegments("/hubs/notifications") || path.StartsWithSegments("/hubs/meeting")))
+                    (path.StartsWithSegments("/hubs/notifications") || path.StartsWithSegments("/hubs/meeting") || path.StartsWithSegments("/hubs/chat")))
                 {
                     context.Token = accessToken;
                 }
@@ -136,6 +137,7 @@ app.MapControllers();
 // SignalR Hubs
 app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapHub<MeetingHub>("/hubs/meeting");
+app.MapHub<ChatHub>("/hubs/chat");
 
 // Empty Room Shutdown Callback
 var roomTracker = app.Services.GetRequiredService<IMeetingRoomTracker>();

@@ -23,6 +23,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IConnectionRepository, ConnectionRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<ICalendarNoteRepository, CalendarNoteRepository>();
+        services.AddScoped<IDirectMessageRepository, DirectMessageRepository>();
 
         // Security
         services.AddScoped<ITokenService, TokenService>();

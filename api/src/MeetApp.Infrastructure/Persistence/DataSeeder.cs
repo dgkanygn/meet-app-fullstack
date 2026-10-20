@@ -19,11 +19,28 @@ public static class DataSeeder
         try
         {
             await context.Database.ExecuteSqlRawAsync("ALTER TABLE meetings ADD COLUMN IF NOT EXISTS \"EndedAt\" timestamp with time zone;");
+            await context.Database.ExecuteSqlRawAsync(@"
+                CREATE TABLE IF NOT EXISTS direct_messages (
+                    ""Id"" uuid NOT NULL,
+                    ""SenderId"" uuid NOT NULL,
+                    ""ReceiverId"" uuid NOT NULL,
+                    ""Content"" character varying(4000) NOT NULL,
+                    ""IsRead"" boolean NOT NULL DEFAULT false,
+                    ""CreatedAt"" timestamp with time zone NOT NULL,
+                    CONSTRAINT ""PK_direct_messages"" PRIMARY KEY (""Id""),
+                    CONSTRAINT ""FK_direct_messages_profiles_SenderId"" FOREIGN KEY (""SenderId"") REFERENCES profiles (""Id"") ON DELETE RESTRICT,
+                    CONSTRAINT ""FK_direct_messages_profiles_ReceiverId"" FOREIGN KEY (""ReceiverId"") REFERENCES profiles (""Id"") ON DELETE RESTRICT
+                );
+                CREATE INDEX IF NOT EXISTS ""IX_direct_messages_SenderId_ReceiverId"" ON direct_messages (""SenderId"", ""ReceiverId"");
+                CREATE INDEX IF NOT EXISTS ""IX_direct_messages_ReceiverId_SenderId"" ON direct_messages (""ReceiverId"", ""SenderId"");
+                CREATE INDEX IF NOT EXISTS ""IX_direct_messages_CreatedAt"" ON direct_messages (""CreatedAt"");
+            ");
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Could not alter meetings table for EndedAt column.");
+            logger.LogWarning(ex, "Could not alter meetings table or ensure direct_messages table exists.");
         }
+
 
         if (!await context.Profiles.AnyAsync())
         {
@@ -140,5 +157,54 @@ public static class DataSeeder
         {
             logger.LogInformation("Veritabanında zaten veri var, seed atlandı.");
         }
+
+        // 5. Seed sample direct messages if none exist
+        try
+        {
+            if (!await context.DirectMessages.AnyAsync())
+            {
+                var dogukanUser = await context.Profiles.FirstOrDefaultAsync(p => p.Username == "dogukan");
+                var testUser = await context.Profiles.FirstOrDefaultAsync(p => p.Username == "testuser");
+                if (dogukanUser != null && testUser != null)
+                {
+                    await context.DirectMessages.AddRangeAsync(
+                        new DirectMessage
+                        {
+                            Id = Guid.NewGuid(),
+                            SenderId = testUser.Id,
+                            ReceiverId = dogukanUser.Id,
+                            Content = "Selam Doğukan! MeetApp projesine hoş geldin.",
+                            IsRead = true,
+                            CreatedAt = DateTime.UtcNow.AddHours(-3)
+                        },
+                        new DirectMessage
+                        {
+                            Id = Guid.NewGuid(),
+                            SenderId = dogukanUser.Id,
+                            ReceiverId = testUser.Id,
+                            Content = "Selam! Teşekkürler, mesajlaşma modülü harika görünüyor.",
+                            IsRead = true,
+                            CreatedAt = DateTime.UtcNow.AddHours(-2)
+                        },
+                        new DirectMessage
+                        {
+                            Id = Guid.NewGuid(),
+                            SenderId = testUser.Id,
+                            ReceiverId = dogukanUser.Id,
+                            Content = "Geliştirmeleri test edebilirsin, harika iş!",
+                            IsRead = false,
+                            CreatedAt = DateTime.UtcNow.AddMinutes(-15)
+                        }
+                    );
+                    await context.SaveChangesAsync();
+                    logger.LogInformation("Örnek mesajlar eklendi.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not seed sample direct messages.");
+        }
     }
 }
+
