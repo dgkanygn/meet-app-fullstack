@@ -1,7 +1,8 @@
 "use client";
 
-import { Clock, ArrowLeft, ShieldAlert, Zap } from "lucide-react";
+import { Clock, ArrowLeft, ShieldAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Logo from "@/components/ui/Logo";
 
 interface WaitingRoomProps {
   meetingTitle?: string;
@@ -45,12 +46,9 @@ export default function WaitingRoom({
 
   return (
     <div className="flex h-dvh flex-col items-center justify-center bg-[#171512] px-6 text-center select-none">
-      {/* Üstte küçük Meet logosu */}
-      <div className="absolute top-4 left-4 flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-[5px] bg-[#E07A45]">
-          <Zap size={13} className="text-[#171512]" />
-        </div>
-        <span className="text-xs font-semibold text-[#F2EFEA]">MeetApp</span>
+      {/* Üstte küçük PulseMeet logosu */}
+      <div className="absolute top-4 left-4">
+        <Logo href="/dashboard" size="xs" />
       </div>
 
       <div className="relative mb-6 flex items-center justify-center">

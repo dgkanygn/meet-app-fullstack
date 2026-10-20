@@ -8,13 +8,13 @@ import {
   Video,
   LogIn,
   X,
-  Zap,
   CalendarPlus,
   Settings,
   LogOut,
   ListVideo,
   MessageSquare,
 } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 import Avatar from "@/components/ui/Avatar";
 import { useSession } from "@/lib/context/SessionContext";
 
@@ -61,15 +61,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         ].join(" ")}
       >
         {/* Logo */}
-        <div className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] bg-accent">
-              <Zap size={14} className="text-accent-fg" />
-            </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground">
-              Meet
-            </span>
-          </Link>
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+          <Logo href="/dashboard" size="md" />
+
+          {/* Kapatma yalnızca mobilde anlamlı */}
 
           {/* Kapatma yalnızca mobilde anlamlı */}
           <button

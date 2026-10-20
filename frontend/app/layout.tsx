@@ -19,9 +19,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Meet — Video Meetings, Simplified",
+  title: "PulseMeet — Video Meetings, Simplified",
   description:
-    "Meet ile anında toplantı başlat, katıl ve ekibinle her yerden bağlantıda kal.",
+    "PulseMeet ile anında toplantı başlat, katıl ve ekibinle kesintisiz bağlantıda kal.",
 };
 
 export default function RootLayout({

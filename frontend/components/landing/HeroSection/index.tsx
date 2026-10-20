@@ -10,7 +10,7 @@ function MockMeetingUI() {
         {/* Top bar mock */}
         <div className="flex items-center justify-between">
           <span className="text-xs text-muted font-mono">
-            meet.app/a3f9k2
+            pulsemeet.live/a3f9k2
           </span>
           <div className="flex gap-1">
             <span className="w-2 h-2 rounded-full bg-error/60" />
@@ -60,10 +60,7 @@ export default function HeroSection() {
       <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         {/* Left: Copy */}
         <div className="space-y-6">
-          <h1
-            className="text-[clamp(2.5rem,5vw,3.75rem)] leading-[1.1] font-normal text-foreground"
-            style={{ fontFamily: "var(--font-instrument-serif)" }}
-          >
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.15]">
             Toplantılar artık
             <br />
             <span className="text-accent">daha basit.</span>

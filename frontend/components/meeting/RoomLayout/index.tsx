@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Zap,
   Copy,
   Check,
   X,
@@ -13,6 +12,7 @@ import {
   ShieldAlert,
   Users,
 } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 import VideoGrid from "@/components/meeting/VideoGrid";
 import ControlBar from "@/components/meeting/ControlBar";
 import ChatPanel from "@/components/meeting/ChatPanel";
@@ -375,13 +375,9 @@ export default function RoomLayout({ meetingId }: RoomLayoutProps) {
       {/* Üst bar */}
       <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b border-[#332F2A] px-3 sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] bg-[#E07A45]">
-            <Zap size={10} className="text-[#171512]" />
-          </div>
-          <span className="hidden text-xs font-medium text-[#F2EFEA] sm:inline">
-            Meet
-          </span>
-          <span className="ml-1 truncate text-xs text-[#A39C93]">
+          <Logo href="/dashboard" size="xs" textClassName="hidden sm:inline" />
+          <span className="text-xs text-[#524c45]">|</span>
+          <span className="truncate text-xs text-[#A39C93]">
             {meeting?.title ?? "Yükleniyor..."}
           </span>
         </div>

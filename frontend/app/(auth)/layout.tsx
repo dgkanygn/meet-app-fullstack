@@ -2,8 +2,7 @@
 
 import { ReactNode, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Zap } from "lucide-react";
+import Logo from "@/components/ui/Logo";
 import { getAccessToken } from "@/lib/apiClient";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
@@ -18,12 +17,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center bg-background px-4 py-12">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2 mb-10 cursor-pointer">
-        <div className="w-7 h-7 rounded-[6px] bg-accent flex items-center justify-center">
-          <Zap size={14} className="text-accent-fg" />
-        </div>
-        <span className="font-semibold text-sm text-foreground">Meet</span>
-      </Link>
+      <div className="mb-10">
+        <Logo href="/" size="md" />
+      </div>
 
       {/* Form card */}
       <div className="w-full max-w-[400px] bg-surface border border-border rounded-[8px] p-6 sm:p-8">
