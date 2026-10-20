@@ -13,7 +13,8 @@ public class MeetingParticipantService(
     IMeetingParticipantRepository participantRepository,
     IProfileRepository profileRepository,
     INotificationRepository notificationRepository,
-    INotificationPublisher notificationPublisher) : IMeetingParticipantService
+    INotificationPublisher notificationPublisher,
+    IMeetingRealtimeNotifier? meetingNotifier = null) : IMeetingParticipantService
 {
     public async Task<IEnumerable<ParticipantResponse>> GetParticipantsAsync(Guid meetingId, CancellationToken ct = default)
     {
@@ -74,13 +75,17 @@ public class MeetingParticipantService(
 
     public async Task<ParticipantResponse> UpdateParticipantStatusAsync(Guid meetingId, Guid participantId, Guid requesterId, UpdateParticipantStatusRequest request, CancellationToken ct = default)
     {
+        var meeting = await meetingRepository.GetByIdAsync(meetingId, ct)
+            ?? throw new NotFoundException("Meeting", meetingId);
+
         var participant = await participantRepository.GetByIdAsync(participantId, ct)
             ?? throw new NotFoundException("Participant", participantId);
 
         if (participant.MeetingId != meetingId)
             throw new NotFoundException("Participant", participantId);
 
-        if (participant.ProfileId != requesterId)
+        var isHost = meeting.HostId == requesterId;
+        if (participant.ProfileId != requesterId && !isHost)
             throw new ForbiddenException("Cannot update another participant's status.");
 
         participant.Status = request.Status;
@@ -88,6 +93,78 @@ public class MeetingParticipantService(
 
         participantRepository.Update(participant);
         await participantRepository.SaveChangesAsync(ct);
+
+        if (meetingNotifier != null)
+        {
+            if (request.Status == MeetingParticipantStatus.Accepted)
+            {
+                await meetingNotifier.NotifyJoinApprovedAsync(meetingId, participant.ProfileId);
+                await meetingNotifier.NotifyWaitingRoomUpdatedAsync(meetingId);
+            }
+            else if (request.Status == MeetingParticipantStatus.Rejected)
+            {
+                await meetingNotifier.NotifyJoinRejectedAsync(meetingId, participant.ProfileId);
+                await meetingNotifier.NotifyWaitingRoomUpdatedAsync(meetingId);
+            }
+        }
+
+        return ToResponse(participant);
+    }
+
+    public async Task<ParticipantResponse> ApproveParticipantAsync(Guid meetingId, Guid participantId, Guid hostId, CancellationToken ct = default)
+    {
+        var meeting = await meetingRepository.GetByIdAsync(meetingId, ct)
+            ?? throw new NotFoundException("Meeting", meetingId);
+
+        if (meeting.HostId != hostId)
+            throw new ForbiddenException("Only the host can approve participants.");
+
+        var participant = await participantRepository.GetByIdAsync(participantId, ct)
+            ?? throw new NotFoundException("Participant", participantId);
+
+        if (participant.MeetingId != meetingId)
+            throw new NotFoundException("Participant", participantId);
+
+        participant.Status = MeetingParticipantStatus.Accepted;
+        participant.RespondedAt = DateTime.UtcNow;
+
+        participantRepository.Update(participant);
+        await participantRepository.SaveChangesAsync(ct);
+
+        if (meetingNotifier != null)
+        {
+            await meetingNotifier.NotifyJoinApprovedAsync(meetingId, participant.ProfileId);
+            await meetingNotifier.NotifyWaitingRoomUpdatedAsync(meetingId);
+        }
+
+        return ToResponse(participant);
+    }
+
+    public async Task<ParticipantResponse> RejectParticipantAsync(Guid meetingId, Guid participantId, Guid hostId, CancellationToken ct = default)
+    {
+        var meeting = await meetingRepository.GetByIdAsync(meetingId, ct)
+            ?? throw new NotFoundException("Meeting", meetingId);
+
+        if (meeting.HostId != hostId)
+            throw new ForbiddenException("Only the host can reject participants.");
+
+        var participant = await participantRepository.GetByIdAsync(participantId, ct)
+            ?? throw new NotFoundException("Participant", participantId);
+
+        if (participant.MeetingId != meetingId)
+            throw new NotFoundException("Participant", participantId);
+
+        participant.Status = MeetingParticipantStatus.Rejected;
+        participant.RespondedAt = DateTime.UtcNow;
+
+        participantRepository.Update(participant);
+        await participantRepository.SaveChangesAsync(ct);
+
+        if (meetingNotifier != null)
+        {
+            await meetingNotifier.NotifyJoinRejectedAsync(meetingId, participant.ProfileId);
+            await meetingNotifier.NotifyWaitingRoomUpdatedAsync(meetingId);
+        }
 
         return ToResponse(participant);
     }
@@ -106,6 +183,12 @@ public class MeetingParticipantService(
         participant.Status = MeetingParticipantStatus.Removed;
         participantRepository.Update(participant);
         await participantRepository.SaveChangesAsync(ct);
+
+        if (meetingNotifier != null)
+        {
+            await meetingNotifier.NotifyParticipantKickedAsync(meetingId, participant.ProfileId);
+            await meetingNotifier.NotifyParticipantRemovedAsync(meetingId, participant.Id, participant.ProfileId);
+        }
     }
 
     private static ParticipantResponse ToResponse(MeetingParticipant p) =>

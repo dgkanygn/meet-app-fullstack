@@ -11,7 +11,8 @@ public class MeetingService(
     IMeetingRepository meetingRepository,
     IMeetingParticipantRepository participantRepository,
     IProfileRepository profileRepository,
-    IMeetingRoomTracker? roomTracker = null) : IMeetingService
+    IMeetingRoomTracker? roomTracker = null,
+    IMeetingRealtimeNotifier? meetingNotifier = null) : IMeetingService
 {
     public async Task<MeetingResponse> CreateMeetingAsync(Guid hostId, CreateMeetingRequest request, CancellationToken ct = default)
     {
@@ -112,7 +113,7 @@ public class MeetingService(
         await meetingRepository.SaveChangesAsync(ct);
     }
 
-    public async Task JoinMeetingAsync(Guid id, Guid profileId, string? password = null, CancellationToken ct = default)
+    public async Task<MeetingParticipantStatus> JoinMeetingAsync(Guid id, Guid profileId, string? password = null, CancellationToken ct = default)
     {
         var meeting = await meetingRepository.GetByIdAsync(id, ct)
             ?? throw new NotFoundException("Meeting", id);
@@ -131,20 +132,29 @@ public class MeetingService(
                 throw new ForbiddenException("Incorrect meeting password.");
         }
 
+        // Host her zaman Accepted durumundadır.
+        // Katılımcı zaten bu oturumda kabul edilmişse (sayfa yenileme) Accepted kalır, değilse Waiting olur.
+        var targetStatus = isHost
+            ? MeetingParticipantStatus.Accepted
+            : (isAlreadyAccepted ? MeetingParticipantStatus.Accepted : MeetingParticipantStatus.Waiting);
+
+        Guid participantId;
         if (existing is not null)
         {
-            existing.Status = MeetingParticipantStatus.Accepted;
+            participantId = existing.Id;
+            existing.Status = targetStatus;
             existing.RespondedAt = DateTime.UtcNow;
             participantRepository.Update(existing);
         }
         else
         {
+            participantId = Guid.NewGuid();
             var participant = new MeetingParticipant
             {
-                Id = Guid.NewGuid(),
+                Id = participantId,
                 MeetingId = id,
                 ProfileId = profileId,
-                Status = MeetingParticipantStatus.Accepted,
+                Status = targetStatus,
                 InvitedAt = DateTime.UtcNow,
                 RespondedAt = DateTime.UtcNow
             };
@@ -152,16 +162,39 @@ public class MeetingService(
         }
 
         await participantRepository.SaveChangesAsync(ct);
+
+        if (targetStatus == MeetingParticipantStatus.Waiting && meetingNotifier != null)
+        {
+            var profile = await profileRepository.GetByIdAsync(profileId, ct);
+            if (profile != null)
+            {
+                await meetingNotifier.NotifyUserWaitingAsync(
+                    id, profileId, participantId, profile.FullName, profile.Username, profile.AvatarUrl);
+            }
+        }
+
+        return targetStatus;
     }
 
     public async Task LeaveMeetingAsync(Guid id, Guid profileId, CancellationToken ct = default)
     {
+        var meeting = await meetingRepository.GetByIdAsync(id, ct);
         var participant = await participantRepository.GetByMeetingAndProfileAsync(id, profileId, ct);
         if (participant is not null)
         {
             participant.RespondedAt = DateTime.UtcNow;
+            // Host olmayan katılımcı toplantıdan çıktığında, tekrar girerse onay gereksin diye durumunu Waiting'e alıyoruz
+            if (meeting != null && meeting.HostId != profileId && participant.Status == MeetingParticipantStatus.Accepted)
+            {
+                participant.Status = MeetingParticipantStatus.Waiting;
+            }
             participantRepository.Update(participant);
             await participantRepository.SaveChangesAsync(ct);
+
+            if (meetingNotifier != null)
+            {
+                await meetingNotifier.NotifyWaitingRoomUpdatedAsync(id);
+            }
         }
     }
 

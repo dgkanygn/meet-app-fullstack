@@ -8,6 +8,7 @@ import {
   Monitor,
   MonitorOff,
   Users,
+  MessageSquare,
   PhoneOff,
 } from "lucide-react";
 
@@ -17,11 +18,14 @@ interface ControlBarProps {
   isScreenSharing: boolean;
   participantCount: number;
   isParticipantsOpen: boolean;
+  isChatOpen: boolean;
+  unreadChatCount?: number;
   hasLocalMedia: boolean;
   onToggleMic: () => void;
   onToggleCam: () => void;
   onToggleScreenShare: () => void;
   onToggleParticipants: () => void;
+  onToggleChat: () => void;
   onLeave: () => void;
 }
 
@@ -40,11 +44,14 @@ export default function ControlBar({
   isScreenSharing,
   participantCount,
   isParticipantsOpen,
+  isChatOpen,
+  unreadChatCount = 0,
   hasLocalMedia,
   onToggleMic,
   onToggleCam,
   onToggleScreenShare,
   onToggleParticipants,
+  onToggleChat,
   onLeave,
 }: ControlBarProps) {
   return (
@@ -83,6 +90,7 @@ export default function ControlBar({
         {isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
       </button>
 
+      {/* Katılımcılar */}
       <button
         onClick={onToggleParticipants}
         title="Katılımcılar"
@@ -98,6 +106,26 @@ export default function ControlBar({
         {participantCount > 0 && (
           <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E07A45] px-1 text-[10px] font-semibold text-[#171512]">
             {participantCount}
+          </span>
+        )}
+      </button>
+
+      {/* Sohbet */}
+      <button
+        onClick={onToggleChat}
+        title="Sohbet"
+        aria-label="Sohbet"
+        aria-pressed={isChatOpen}
+        className={[
+          baseButton,
+          "relative",
+          isChatOpen ? activeButton : idleButton,
+        ].join(" ")}
+      >
+        <MessageSquare size={18} />
+        {unreadChatCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#E07A45] px-1 text-[10px] font-semibold text-[#171512]">
+            {unreadChatCount > 9 ? "9+" : unreadChatCount}
           </span>
         )}
       </button>

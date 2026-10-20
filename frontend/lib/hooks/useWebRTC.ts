@@ -1,21 +1,15 @@
 "use client";
 
 /**
- * useWebRTC — MeetingHub üzerinden mesh topolojili görüntülü görüşme.
- *
- * Sinyalleşme protokolü (backend MeetingHub ile eşleşir):
- *  - Odaya biri katıldığında, hâlihazırda odada olanlara `UserJoined` gider.
- *    Teklifi (offer) her zaman odada zaten bulunan taraf başlatır; yeni gelen
- *    yalnızca cevap verir. Böylece iki taraf aynı anda teklif göndermez.
- *  - `ReceiveOffer` / `ReceiveAnswer` / `ReceiveIceCandidate` karşı tarafın
- *    connectionId ve profil id'siyle birlikte gelir.
+ * useWebRTC — MeetingHub üzerinden mesh topolojili görüntülü görüşme,
+ * canlı sohbet ve oda bildirimleri.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { HubConnection } from "@microsoft/signalr";
 import { createHubConnection } from "@/lib/signalr";
 import { meetingService } from "@/lib/services/meetingService";
-import type { IceServer } from "@/lib/types";
+import type { IceServer, ChatMessage } from "@/lib/types";
 
 export interface RemotePeer {
   connectionId: string;
@@ -38,9 +32,26 @@ interface PeerEntry {
   pendingCandidates: RTCIceCandidateInit[];
 }
 
+export interface WaitingUser {
+  meetingId: string;
+  profileId: string;
+  participantId: string;
+  fullName: string;
+  username: string;
+  avatarUrl?: string | null;
+}
+
+export interface UseWebRTCOptions {
+  currentUserId?: string;
+  onWaitingRoomUpdated?: () => void;
+  onUserWaiting?: (user: WaitingUser) => void;
+  onParticipantApproved?: (payload: { participantId: string; profileId: string }) => void;
+  onParticipantRemoved?: (payload: { participantId: string; profileId: string }) => void;
+}
+
 const FALLBACK_ICE: IceServer[] = [{ urls: "stun:stun.l.google.com:19302" }];
 
-export function useWebRTC(meetingId: string) {
+export function useWebRTC(meetingId: string, options?: UseWebRTCOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remotePeers, setRemotePeers] = useState<RemotePeer[]>([]);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -51,11 +62,20 @@ export function useWebRTC(meetingId: string) {
   const [isCamOn, setIsCamOn] = useState(true);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
 
+  // Canlı sohbet ve katılımcı durumu
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [isKicked, setIsKicked] = useState(false);
+
   const connectionRef = useRef<HubConnection | null>(null);
   const peersRef = useRef<Map<string, PeerEntry>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
   const iceConfigRef = useRef<RTCConfiguration>({ iceServers: FALLBACK_ICE });
+
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
 
   const removePeer = useCallback((connectionId: string) => {
     const entry = peersRef.current.get(connectionId);
@@ -131,6 +151,7 @@ export function useWebRTC(meetingId: string) {
     async function connect() {
       setIsConnecting(true);
       setError(null);
+      setIsKicked(false);
 
       // 1) ICE sunucuları — alınamazsa public STUN ile devam edilir.
       try {
@@ -218,8 +239,60 @@ export function useWebRTC(meetingId: string) {
         await entry.pc.addIceCandidate(payload.candidate).catch(() => {});
       });
 
-      connection.on("UserLeft", (payload: { connectionId: string }) => {
-        removePeer(payload.connectionId);
+      connection.on("UserLeft", (payload: { connectionId?: string; userId?: string }) => {
+        if (payload.connectionId) {
+          removePeer(payload.connectionId);
+        } else if (payload.userId) {
+          peersRef.current.forEach((entry, connId) => {
+            if (entry.userId === payload.userId) {
+              removePeer(connId);
+            }
+          });
+        }
+      });
+
+      // ─── Sohbet Mesajı ──────────────────────────────────────────────────────
+      connection.on("ReceiveChatMessage", (msg: ChatMessage) => {
+        setChatMessages((prev) => [...prev, msg]);
+      });
+
+      // ─── Toplantıdan Atılma ────────────────────────────────────────────────
+      connection.on("KickedFromMeeting", (payload?: { kickedUserId?: string }) => {
+        const myId = optionsRef.current?.currentUserId;
+        if (!payload?.kickedUserId || !myId || payload.kickedUserId === myId) {
+          // Yerel medyayı ve bağlantıları kapat
+          localStreamRef.current?.getTracks().forEach((t) => t.stop());
+          localStreamRef.current = null;
+          setLocalStream(null);
+
+          screenStreamRef.current?.getTracks().forEach((t) => t.stop());
+          screenStreamRef.current = null;
+
+          peersRef.current.forEach((entry) => {
+            entry.pc.close();
+          });
+          peersRef.current.clear();
+          setRemotePeers([]);
+
+          setIsKicked(true);
+        }
+      });
+
+      // ─── Bekleme Odası ve Katılımcı Olayları ──────────────────────────────
+      connection.on("WaitingRoomUpdated", () => {
+        optionsRef.current?.onWaitingRoomUpdated?.();
+      });
+
+      connection.on("UserWaiting", (user: WaitingUser) => {
+        optionsRef.current?.onUserWaiting?.(user);
+      });
+
+      connection.on("ParticipantApproved", (payload: { participantId: string; profileId: string }) => {
+        optionsRef.current?.onParticipantApproved?.(payload);
+      });
+
+      connection.on("ParticipantRemoved", (payload: { participantId: string; profileId: string }) => {
+        optionsRef.current?.onParticipantRemoved?.(payload);
       });
 
       startPromise = connection.start();
@@ -260,8 +333,6 @@ export function useWebRTC(meetingId: string) {
       const connection = connectionRef.current;
       connectionRef.current = null;
       if (connection) {
-        // start() tamamlanmadan stop() çağrılırsa SignalR
-        // "connection was stopped during negotiation" hatası fırlatır.
         Promise.resolve(startPromise)
           .catch(() => {})
           .finally(() => connection.stop().catch(() => {}));
@@ -326,6 +397,11 @@ export function useWebRTC(meetingId: string) {
     }
   }, [isScreenSharing, replaceVideoTrackForAllPeers, stopScreenShare]);
 
+  const sendChatMessage = useCallback(async (text: string) => {
+    if (!text.trim() || !connectionRef.current) return;
+    await connectionRef.current.invoke("SendChatMessage", text.trim());
+  }, []);
+
   return {
     localStream,
     remotePeers,
@@ -335,6 +411,9 @@ export function useWebRTC(meetingId: string) {
     isMicOn,
     isCamOn,
     isScreenSharing,
+    chatMessages,
+    isKicked,
+    sendChatMessage,
     toggleMic,
     toggleCam,
     toggleScreenShare,

@@ -56,7 +56,23 @@ export type MeetingParticipantStatus =
   | "Invited"
   | "Accepted"
   | "Rejected"
-  | "Removed";
+  | "Removed"
+  | "Waiting";
+
+export interface JoinMeetingResponse {
+  status: MeetingParticipantStatus;
+}
+
+export interface ChatMessage {
+  id: string;
+  meetingId: string;
+  senderId: string;
+  senderFullName: string;
+  senderUsername: string;
+  senderAvatarUrl?: string | null;
+  text: string;
+  sentAt: string;
+}
 
 export interface ParticipantResponse {
   id: string;

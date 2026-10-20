@@ -26,6 +26,24 @@ export const participantService = {
     );
   },
 
+  approve(
+    meetingId: string,
+    participantId: string
+  ): Promise<ParticipantResponse> {
+    return api.post<ParticipantResponse>(
+      `/api/meetings/${meetingId}/participants/${participantId}/approve`
+    );
+  },
+
+  reject(
+    meetingId: string,
+    participantId: string
+  ): Promise<ParticipantResponse> {
+    return api.post<ParticipantResponse>(
+      `/api/meetings/${meetingId}/participants/${participantId}/reject`
+    );
+  },
+
   remove(meetingId: string, participantId: string): Promise<void> {
     return api.delete(
       `/api/meetings/${meetingId}/participants/${participantId}`

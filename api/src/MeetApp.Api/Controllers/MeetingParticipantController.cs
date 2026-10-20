@@ -31,6 +31,20 @@ public class MeetingParticipantController(IMeetingParticipantService participant
         return Ok(result);
     }
 
+    [HttpPost("{participantId:guid}/approve")]
+    public async Task<IActionResult> Approve(Guid meetingId, Guid participantId, CancellationToken ct)
+    {
+        var result = await participantService.ApproveParticipantAsync(meetingId, participantId, CurrentUserId, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("{participantId:guid}/reject")]
+    public async Task<IActionResult> Reject(Guid meetingId, Guid participantId, CancellationToken ct)
+    {
+        var result = await participantService.RejectParticipantAsync(meetingId, participantId, CurrentUserId, ct);
+        return Ok(result);
+    }
+
     [HttpDelete("{participantId:guid}")]
     public async Task<IActionResult> Remove(Guid meetingId, Guid participantId, CancellationToken ct)
     {

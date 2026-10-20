@@ -32,6 +32,7 @@ builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // NotificationPublisher — Api katmanında, IHubContext bağımlılığından dolayı burada kayıtlı
 builder.Services.AddScoped<INotificationPublisher, NotificationPublisher>();
+builder.Services.AddScoped<IMeetingRealtimeNotifier, MeetingRealtimeNotifier>();
 builder.Services.AddSingleton<IMeetingRoomTracker, MeetingRoomTracker>();
 
 // SignalR — hub payload'lari da REST ile ayni JSON sekline sahip olsun

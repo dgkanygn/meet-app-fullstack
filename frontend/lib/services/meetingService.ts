@@ -3,6 +3,7 @@ import type {
   MeetingResponse,
   MeetingDetailResponse,
   IceServersResponse,
+  MeetingParticipantStatus,
 } from "@/lib/types";
 
 export interface CreateMeetingPayload {
@@ -46,8 +47,8 @@ export const meetingService = {
     return api.delete(`/api/meetings/${id}`);
   },
 
-  join(id: string, password?: string): Promise<void> {
-    return api.post<void>(`/api/meetings/${id}/join`, { password });
+  join(id: string, password?: string): Promise<{ status: MeetingParticipantStatus }> {
+    return api.post<{ status: MeetingParticipantStatus }>(`/api/meetings/${id}/join`, { password });
   },
 
   leave(id: string): Promise<void> {

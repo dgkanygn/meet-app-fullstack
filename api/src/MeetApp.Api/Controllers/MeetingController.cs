@@ -48,8 +48,8 @@ public class MeetingController(IMeetingService meetingService, IConfiguration co
     [HttpPost("{id:guid}/join")]
     public async Task<IActionResult> Join(Guid id, [FromBody] JoinMeetingRequest? request, CancellationToken ct)
     {
-        await meetingService.JoinMeetingAsync(id, CurrentUserId, request?.Password, ct);
-        return NoContent();
+        var status = await meetingService.JoinMeetingAsync(id, CurrentUserId, request?.Password, ct);
+        return Ok(new { status });
     }
 
     [HttpPost("{id:guid}/leave")]

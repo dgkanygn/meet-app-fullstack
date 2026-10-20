@@ -9,7 +9,7 @@ public interface IMeetingService
     Task<MeetingDetailResponse> GetMeetingByIdAsync(Guid id, Guid requesterId, CancellationToken ct = default);
     Task<MeetingResponse> UpdateMeetingAsync(Guid id, Guid hostId, UpdateMeetingRequest request, CancellationToken ct = default);
     Task DeleteMeetingAsync(Guid id, Guid hostId, CancellationToken ct = default);
-    Task JoinMeetingAsync(Guid id, Guid profileId, string? password = null, CancellationToken ct = default);
+    Task<MeetApp.Domain.Enums.MeetingParticipantStatus> JoinMeetingAsync(Guid id, Guid profileId, string? password = null, CancellationToken ct = default);
     Task LeaveMeetingAsync(Guid id, Guid profileId, CancellationToken ct = default);
     Task EndMeetingAsync(Guid id, CancellationToken ct = default);
     Task<bool> IsParticipantAsync(Guid meetingId, Guid profileId, CancellationToken ct = default);
